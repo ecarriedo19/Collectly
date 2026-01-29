@@ -245,7 +245,7 @@ export default function Invoices({ user }) {
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Customer</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Amount</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Days Late</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Timeline</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Autopilot</th>
                       <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500"></th>
