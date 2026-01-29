@@ -76,7 +76,8 @@ export default function Dashboard({ user }) {
 
   return (
     <Layout user={user}>
-      <div className="space-y-8" data-testid="dashboard-page">
+      <SetupBanner />
+      <div className="space-y-6" data-testid="dashboard-page">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -94,6 +95,9 @@ export default function Dashboard({ user }) {
           </Button>
         </div>
 
+        {/* System Status (compact) */}
+        <SystemStatus workspace={workspace} compact={true} />
+
         {/* Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard
@@ -107,7 +111,7 @@ export default function Dashboard({ user }) {
             title="Past Due"
             value={formatCurrency(summary?.total_past_due_amount || 0, summary?.currency)}
             subtitle={`${summary?.total_past_due || 0} invoices`}
-            icon={<AlertTriangle className="w-5 h-5" />}
+            icon={<AlertTriangle className="w-5 h-5" />}}
             iconBg="bg-rose-100 text-rose-600"
           />
           <MetricCard
