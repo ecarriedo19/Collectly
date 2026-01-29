@@ -124,8 +124,6 @@ export default function Invoices({ user }) {
         return { text: `${daysDiff} days late`, color: 'text-slate-500' };
       }
     }
-    return { text: formatDate(invoice.updated_at, timezone), color: 'text-slate-500' };
-    }
     return { text: '-', color: 'text-slate-400' };
   };
 
