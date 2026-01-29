@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { toast } from "sonner";
+import { formatDateTime } from "../utils/dateUtils";
 import { 
   Mail, 
   CreditCard, 
@@ -21,6 +22,7 @@ import {
 export default function Integrations({ user }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [workspace, setWorkspace] = useState(null);
   const [gmailStatus, setGmailStatus] = useState({ connected: false });
   const [stripeStatus, setStripeStatus] = useState({ connected: false });
   const [stripeKey, setStripeKey] = useState('');
