@@ -320,8 +320,8 @@ export default function InvoiceDetail({ user }) {
                                 <p className="text-sm text-slate-500 mt-1 line-clamp-2">{event.snippet}</p>
                               )}
                             </div>
-                            <span className="text-xs text-slate-400">
-                              {new Date(event.created_at).toLocaleString()}
+                            <span className="text-xs text-slate-400 tabular-nums">
+                              {formatDateTime(event.created_at, workspace?.timezone || 'America/New_York')}
                             </span>
                           </div>
                         </div>
