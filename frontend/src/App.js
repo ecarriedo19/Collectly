@@ -99,6 +99,14 @@ function AppRouter() {
         } 
       />
       <Route 
+        path="/onboarding" 
+        element={
+          <ProtectedRoute>
+            {({ user }) => <OnboardingWizard user={user} />}
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
         path="/dashboard" 
         element={
           <ProtectedRoute>
