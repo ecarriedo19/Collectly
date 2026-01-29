@@ -119,7 +119,7 @@ export default function Invoices({ user }) {
     );
   });
 
-  const hasFilters = statusFilter || stateFilter || searchQuery;
+  const hasFilters = (statusFilter && statusFilter !== 'all') || (stateFilter && stateFilter !== 'all') || searchQuery;
 
   return (
     <Layout user={user}>
