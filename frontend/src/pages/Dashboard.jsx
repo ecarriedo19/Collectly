@@ -194,7 +194,7 @@ export default function Dashboard({ user }) {
                     {invoices.map((invoice) => (
                       <tr key={invoice.invoice_id} className="border-b border-slate-100 table-row-hover">
                         <td className="py-3 px-4">
-                          <span className="font-mono text-sm text-slate-900">
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
                             {invoice.stripe_invoice_id?.slice(-8).toUpperCase()}
                           </span>
                         </td>
@@ -205,7 +205,7 @@ export default function Dashboard({ user }) {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="font-mono text-sm text-slate-900">
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
                             {formatCurrency(invoice.amount_due_cents, invoice.currency)}
                           </span>
                         </td>
