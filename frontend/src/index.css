@@ -61,6 +61,13 @@ code, .mono {
     font-variant-numeric: tabular-nums;
 }
 
+/* Finance-grade number styling */
+.finance-number {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
+}
+
 @layer base {
     * {
         @apply border-border;
