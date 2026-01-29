@@ -161,7 +161,7 @@ export default function Invoices({ user }) {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
                   <SelectItem value="past_due">Past Due</SelectItem>
                   <SelectItem value="paid">Paid</SelectItem>
@@ -174,7 +174,7 @@ export default function Invoices({ user }) {
                   <SelectValue placeholder="All states" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All states</SelectItem>
+                  <SelectItem value="all">All states</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="paused_replied">Paused - Replied</SelectItem>
                   <SelectItem value="paused_manual">Paused - Manual</SelectItem>
