@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { toast } from "sonner";
-import { formatDate, formatDateTime } from "../utils/dateUtils";
+import { formatDate, formatDateTime, getDaysDiff } from "../utils/dateUtils";
 import { 
   ArrowLeft,
   ExternalLink,
