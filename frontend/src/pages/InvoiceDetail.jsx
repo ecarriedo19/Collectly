@@ -129,38 +129,6 @@ export default function InvoiceDetail({ user }) {
     }).format(cents / 100);
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      open: "bg-blue-50 text-blue-700 border-blue-100",
-      past_due: "bg-rose-50 text-rose-700 border-rose-100",
-      paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
-      void: "bg-slate-50 text-slate-600 border-slate-200"
-    };
-    return styles[status] || styles.open;
-  };
-
-  const getStateBadge = (state) => {
-    const styles = {
-      active: "bg-indigo-50 text-indigo-700 border-indigo-100",
-      paused_replied: "bg-amber-50 text-amber-700 border-amber-100",
-      paused_manual: "bg-amber-50 text-amber-700 border-amber-100",
-      stopped_paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
-      stopped_manual: "bg-slate-50 text-slate-600 border-slate-200"
-    };
-    return styles[state] || styles.active;
-  };
-
-  const formatState = (state) => {
-    const labels = {
-      active: "Active",
-      paused_replied: "Paused - Replied",
-      paused_manual: "Paused",
-      stopped_paid: "Stopped - Paid",
-      stopped_manual: "Stopped"
-    };
-    return labels[state] || state;
-  };
-
   const getEventIcon = (eventType) => {
     switch (eventType) {
       case 'sent':
