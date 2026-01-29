@@ -411,7 +411,7 @@ export default function InvoiceDetail({ user }) {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Stripe Invoice ID</p>
-                  <p className="text-sm font-mono text-slate-900 mt-1">{invoice.stripe_invoice_id}</p>
+                  <p className="text-sm text-slate-900 mt-1 font-medium">{invoice.stripe_invoice_id}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Created</p>
