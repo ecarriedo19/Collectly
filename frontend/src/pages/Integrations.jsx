@@ -295,7 +295,7 @@ export default function Integrations({ user }) {
                   )}
                   {stripeStatus.last_sync_at && (
                     <p className="text-sm text-slate-500">
-                      Last synced: {new Date(stripeStatus.last_sync_at).toLocaleString()}
+                      Last synced: <span className="tabular-nums">{formatDateTime(stripeStatus.last_sync_at, workspace?.timezone || 'America/New_York')}</span>
                     </p>
                   )}
                   <div className="flex gap-2">
