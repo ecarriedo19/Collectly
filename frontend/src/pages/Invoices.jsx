@@ -21,8 +21,8 @@ export default function Invoices({ user }) {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   
-  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
-  const [stateFilter, setStateFilter] = useState(searchParams.get('state') || '');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [stateFilter, setStateFilter] = useState(searchParams.get('state') || 'all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
