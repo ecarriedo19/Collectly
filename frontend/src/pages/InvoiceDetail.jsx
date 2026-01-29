@@ -259,8 +259,8 @@ export default function InvoiceDetail({ user }) {
                   </div>
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</p>
-                    <p className="text-lg font-medium text-slate-900 mt-1">
-                      {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                    <p className="text-lg font-medium text-slate-900 mt-1 tabular-nums">
+                      {formatDate(invoice.due_date, workspace?.timezone || 'America/New_York')}
                     </p>
                   </div>
                   <div>
