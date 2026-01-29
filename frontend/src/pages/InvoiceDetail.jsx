@@ -38,6 +38,18 @@ export default function InvoiceDetail({ user }) {
     fetchInvoice();
   }, [invoiceId]);
 
+  const fetchWorkspace = async () => {
+    try {
+      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspace(data.workspace);
+      }
+    } catch (error) {
+      console.error('Error fetching workspace:', error);
+    }
+  };
+
   const fetchInvoice = async () => {
     setLoading(true);
     try {
