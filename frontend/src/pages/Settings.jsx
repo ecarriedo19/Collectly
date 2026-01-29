@@ -159,7 +159,7 @@ export default function Settings({ user }) {
                   className="mt-1"
                   data-testid="workspace-name-input"
                 />
-                <p className="text-sm text-slate-500 mt-1">Used in reminder emails as {{company_name}}</p>
+                <p className="text-sm text-slate-500 mt-1">Used in reminder emails as {"{{company_name}}"}</p>
               </div>
 
               <div>
