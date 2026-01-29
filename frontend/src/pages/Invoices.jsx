@@ -112,37 +112,19 @@ export default function Invoices({ user }) {
     return labels[state] || state;
   };
 
-  const getDaysOverdue = (dueDate) => {
-    if (!dueDate) return null;
-    const due = new Date(dueDate);
-    const today = new Date();
-    const diff = Math.floor((today - due) / (1000 * 60 * 60 * 24));
-    return diff;
-  };
-
-  const getDaysToPay = (dueDate, paidDate) => {
-    if (!dueDate) return null;
-    const due = new Date(dueDate);
-    const paid = paidDate ? new Date(paidDate) : new Date();
-    const diff = Math.floor((paid - due) / (1000 * 60 * 60 * 24));
-    return diff;
-  };
+  const timezone = workspace?.timezone || 'America/New_York';
 
   const formatPaidInfo = (invoice) => {
     // If paid, show when it was paid or days to pay
-    if (invoice.updated_at) {
-      const paidDate = new Date(invoice.updated_at);
-      const dueDate = invoice.due_date ? new Date(invoice.due_date) : null;
-      
-      if (dueDate) {
-        const daysDiff = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
-        if (daysDiff <= 0) {
-          return { text: `${Math.abs(daysDiff)} days early`, color: 'text-emerald-600' };
-        } else {
-          return { text: `${daysDiff} days late`, color: 'text-slate-500' };
-        }
+    if (invoice.updated_at && invoice.due_date) {
+      const daysDiff = getDaysDiff(invoice.due_date, invoice.updated_at);
+      if (daysDiff <= 0) {
+        return { text: `${Math.abs(daysDiff)} days early`, color: 'text-emerald-600' };
+      } else {
+        return { text: `${daysDiff} days late`, color: 'text-slate-500' };
       }
-      return { text: paidDate.toLocaleDateString(), color: 'text-slate-500' };
+    }
+    return { text: formatDate(invoice.updated_at, timezone), color: 'text-slate-500' };
     }
     return { text: '-', color: 'text-slate-400' };
   };
