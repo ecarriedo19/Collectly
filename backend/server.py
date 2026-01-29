@@ -830,6 +830,9 @@ async def sync_stripe(request: Request):
             {"$set": {"last_sync_at": datetime.now(timezone.utc).isoformat()}}
         )
         
+        # Update health status
+        await update_health_status(workspace["workspace_id"], "stripe_sync", "ok")
+        
         return {
             "success": True,
             "customers_synced": customers_synced,
@@ -838,6 +841,8 @@ async def sync_stripe(request: Request):
         
     except Exception as e:
         logger.error(f"Stripe sync error: {e}")
+        # Update health status with error
+        await update_health_status(workspace["workspace_id"], "stripe_sync", "error", str(e))
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
 # ==================== Webhook Endpoint ====================
