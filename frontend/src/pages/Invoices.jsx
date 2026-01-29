@@ -253,7 +253,7 @@ export default function Invoices({ user }) {
                   </thead>
                   <tbody>
                     {filteredInvoices.map((invoice) => {
-                      const daysOverdue = getDaysOverdue(invoice.due_date);
+                      const daysOverdue = invoice.due_date ? getDaysDiff(invoice.due_date) : null;
                       const isPaid = invoice.status === 'paid';
                       const paidInfo = isPaid ? formatPaidInfo(invoice) : null;
                       
