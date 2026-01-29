@@ -254,6 +254,9 @@ export default function Invoices({ user }) {
                   <tbody>
                     {filteredInvoices.map((invoice) => {
                       const daysOverdue = getDaysOverdue(invoice.due_date);
+                      const isPaid = invoice.status === 'paid';
+                      const paidInfo = isPaid ? formatPaidInfo(invoice) : null;
+                      
                       return (
                         <tr key={invoice.invoice_id} className="border-b border-slate-100 table-row-hover">
                           <td className="py-3 px-4">
@@ -278,13 +281,21 @@ export default function Invoices({ user }) {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            {daysOverdue !== null && daysOverdue > 0 ? (
+                            {isPaid ? (
+                              <span className={`text-sm font-medium ${paidInfo.color}`}>
+                                {paidInfo.text}
+                              </span>
+                            ) : daysOverdue !== null && daysOverdue > 0 ? (
                               <span className="text-sm font-medium text-rose-600">
-                                {daysOverdue} days
+                                {daysOverdue} days late
                               </span>
                             ) : daysOverdue !== null && daysOverdue < 0 ? (
                               <span className="text-sm text-slate-500">
                                 Due in {Math.abs(daysOverdue)} days
+                              </span>
+                            ) : daysOverdue === 0 ? (
+                              <span className="text-sm font-medium text-amber-600">
+                                Due today
                               </span>
                             ) : (
                               <span className="text-sm text-slate-400">-</span>
