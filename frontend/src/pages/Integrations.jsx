@@ -210,6 +210,11 @@ export default function Integrations({ user }) {
           <p className="text-slate-500 mt-1">Connect your services to enable automated follow-ups</p>
         </div>
 
+        {/* System Status (full) */}
+        {(stripeStatus.connected || gmailStatus.connected) && (
+          <SystemStatus workspace={workspace} compact={false} />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Gmail Integration */}
           <Card className="card-hover">
