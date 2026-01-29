@@ -951,6 +951,10 @@ async def stripe_webhook(request: Request):
             }}
         )
     
+    # Update webhook health status for the workspace
+    if workspace_id:
+        await update_health_status(workspace_id, "stripe_webhook", "ok")
+    
     return {"received": True}
 
 # ==================== Dashboard Endpoints ====================
