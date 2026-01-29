@@ -10,6 +10,7 @@ import Integrations from "./pages/Integrations";
 import ReminderPolicy from "./pages/ReminderPolicy";
 import Settings from "./pages/Settings";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
+import OnboardingWizard from "./components/OnboardingWizard";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;

@@ -111,7 +111,7 @@ export default function Dashboard({ user }) {
             title="Past Due"
             value={formatCurrency(summary?.total_past_due_amount || 0, summary?.currency)}
             subtitle={`${summary?.total_past_due || 0} invoices`}
-            icon={<AlertTriangle className="w-5 h-5" />}}
+            icon={<AlertTriangle className="w-5 h-5" />}
             iconBg="bg-rose-100 text-rose-600"
           />
           <MetricCard
