@@ -250,47 +250,117 @@ export default function InvoiceDetail({ user }) {
                 <CardTitle>Invoice Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount Due</p>
-                    <p className="text-xl font-bold text-slate-900 tabular-nums tracking-tight mt-1">
-                      {formatCurrency(invoice.amount_due_cents, invoice.currency)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</p>
-                    <p className="text-lg font-medium text-slate-900 mt-1 tabular-nums">
-                      {formatDate(invoice.due_date, workspace?.timezone || 'America/New_York')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Status</p>
-                    <Badge className={`${getStatusBadge(invoice.status)} border mt-2`}>
-                      {invoice.status?.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Autopilot</p>
-                    <Badge className={`${getStateBadge(invoice.autopilot_state)} border mt-2`}>
-                      {formatState(invoice.autopilot_state)}
-                    </Badge>
-                  </div>
-                </div>
+                {(() => {
+                  const timezone = workspace?.timezone || 'America/New_York';
+                  const isPaid = invoice.status === 'paid';
+                  const isPastDue = invoice.status === 'past_due';
+                  const isOpen = invoice.status === 'open';
+                  const daysOverdue = invoice.due_date ? getDaysDiff(invoice.due_date) : null;
+                  
+                  // Calculate days to pay for paid invoices
+                  let paidMetric = null;
+                  if (isPaid && invoice.due_date && invoice.updated_at) {
+                    const daysToPay = getDaysDiff(invoice.due_date, invoice.updated_at);
+                    paidMetric = daysToPay <= 0 
+                      ? { text: `${Math.abs(daysToPay)} days early`, color: 'text-emerald-600' }
+                      : { text: `${daysToPay} days to pay`, color: 'text-slate-600' };
+                  }
+                  
+                  // Build combined status
+                  let statusDisplay = { text: '', style: '' };
+                  if (isPaid) {
+                    statusDisplay = { text: 'Paid', style: 'text-emerald-700 bg-emerald-50' };
+                  } else if (isPastDue) {
+                    if (invoice.autopilot_state === 'paused_replied') {
+                      statusDisplay = { text: 'Past due · Paused (reply)', style: 'text-rose-700 bg-rose-50' };
+                    } else if (invoice.autopilot_state === 'paused_manual') {
+                      statusDisplay = { text: 'Past due · Paused', style: 'text-rose-700 bg-rose-50' };
+                    } else {
+                      statusDisplay = { text: `Past due · ${daysOverdue}d late`, style: 'text-rose-700 bg-rose-50' };
+                    }
+                  } else if (isOpen) {
+                    if (invoice.autopilot_state === 'paused_replied') {
+                      statusDisplay = { text: 'Open · Paused (reply)', style: 'text-amber-700 bg-amber-50' };
+                    } else if (invoice.autopilot_state === 'paused_manual') {
+                      statusDisplay = { text: 'Open · Paused', style: 'text-amber-700 bg-amber-50' };
+                    } else if (daysOverdue === 0) {
+                      statusDisplay = { text: 'Open · Due today', style: 'text-amber-700 bg-amber-50' };
+                    } else if (daysOverdue < 0) {
+                      statusDisplay = { text: `Open · Due in ${Math.abs(daysOverdue)}d`, style: 'text-blue-700 bg-blue-50' };
+                    } else {
+                      statusDisplay = { text: 'Open · Autopilot active', style: 'text-blue-700 bg-blue-50' };
+                    }
+                  } else {
+                    statusDisplay = { text: invoice.status?.replace('_', ' '), style: 'text-slate-600 bg-slate-100' };
+                  }
+                  
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount Due</p>
+                          <p className="text-xl font-bold text-slate-900 tabular-nums tracking-tight mt-1">
+                            {formatCurrency(invoice.amount_due_cents, invoice.currency)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Due Date</p>
+                          <p className="text-lg font-medium text-slate-900 mt-1 tabular-nums">
+                            {formatDate(invoice.due_date, timezone)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Status</p>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium mt-2 ${statusDisplay.style}`}>
+                            {statusDisplay.text}
+                          </span>
+                        </div>
+                        <div>
+                          {isPaid ? (
+                            <>
+                              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Paid On</p>
+                              <p className="text-lg font-medium text-slate-900 mt-1 tabular-nums">
+                                {formatDate(invoice.updated_at, timezone)}
+                              </p>
+                              {paidMetric && (
+                                <p className={`text-sm ${paidMetric.color} mt-0.5`}>{paidMetric.text}</p>
+                              )}
+                            </>
+                          ) : isPastDue || (isOpen && daysOverdue > 0) ? (
+                            <>
+                              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Days Late</p>
+                              <p className="text-lg font-semibold text-rose-600 mt-1 tabular-nums">
+                                {daysOverdue || 0} days
+                              </p>
+                            </>
+                          ) : isOpen && daysOverdue !== null ? (
+                            <>
+                              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Days Until Due</p>
+                              <p className="text-lg font-medium text-slate-900 mt-1 tabular-nums">
+                                {Math.abs(daysOverdue)} days
+                              </p>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
 
-                {/* Customer Info */}
-                {invoice.customer && (
-                  <div className="mt-6 pt-6 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-slate-500" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{invoice.customer.name}</p>
-                        <p className="text-sm text-slate-500">{invoice.customer.email}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                      {/* Customer Info */}
+                      {invoice.customer && (
+                        <div className="mt-6 pt-6 border-t border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-slate-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-slate-900">{invoice.customer.name}</p>
+                              <p className="text-sm text-slate-500">{invoice.customer.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
 
