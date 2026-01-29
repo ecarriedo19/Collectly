@@ -238,7 +238,7 @@ export default function InvoiceDetail({ user }) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Amount Due</p>
-                    <p className="text-xl font-semibold text-slate-900 font-mono mt-1">
+                    <p className="text-xl font-bold text-slate-900 tabular-nums tracking-tight mt-1">
                       {formatCurrency(invoice.amount_due_cents, invoice.currency)}
                     </p>
                   </div>
