@@ -251,7 +251,7 @@ function MetricCard({ title, value, subtitle, icon, iconBg }) {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-            <p className="text-2xl font-semibold text-slate-900 mt-2 font-mono tabular-nums">{value}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2 tabular-nums tracking-tight">{value}</p>
             <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
           </div>
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconBg}`}>
