@@ -239,26 +239,86 @@ export default function Invoices({ user }) {
                 <table className="w-full" data-testid="invoices-table">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Invoice</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Customer</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Amount</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Timeline</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Autopilot</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500"></th>
+                      <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Invoice</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Customer</th>
+                      <th className="text-right py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Amount</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Due Date</th>
+                      <th className="text-left py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Status</th>
+                      <th className="text-right py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredInvoices.map((invoice) => {
                       const daysOverdue = invoice.due_date ? getDaysDiff(invoice.due_date) : null;
                       const isPaid = invoice.status === 'paid';
-                      const paidInfo = isPaid ? formatPaidInfo(invoice) : null;
+                      const isPastDue = invoice.status === 'past_due';
+                      const isOpen = invoice.status === 'open';
+                      
+                      // Build combined status display
+                      const getCombinedStatus = () => {
+                        let statusText = '';
+                        let statusStyle = '';
+                        
+                        if (isPaid) {
+                          // For paid invoices, show "Paid on [date]" or "Paid · X days to pay"
+                          if (invoice.updated_at && invoice.due_date) {
+                            const daysToPay = getDaysDiff(invoice.due_date, invoice.updated_at);
+                            if (daysToPay <= 0) {
+                              statusText = `Paid · ${Math.abs(daysToPay)}d early`;
+                            } else {
+                              statusText = `Paid · ${daysToPay}d to pay`;
+                            }
+                          } else {
+                            statusText = `Paid ${formatDate(invoice.updated_at, timezone)}`;
+                          }
+                          statusStyle = 'text-emerald-700 bg-emerald-50';
+                        } else if (isPastDue) {
+                          const daysLate = daysOverdue || 0;
+                          statusText = `Past due · ${daysLate}d late`;
+                          statusStyle = 'text-rose-700 bg-rose-50';
+                          
+                          // Add autopilot state if not active
+                          if (invoice.autopilot_state === 'paused_replied') {
+                            statusText = `Past due · Paused (reply)`;
+                          } else if (invoice.autopilot_state === 'paused_manual') {
+                            statusText = `Past due · Paused`;
+                          } else if (invoice.autopilot_state === 'stopped_manual') {
+                            statusText = `Past due · Stopped`;
+                          }
+                        } else if (isOpen) {
+                          if (daysOverdue !== null && daysOverdue < 0) {
+                            statusText = `Open · Due in ${Math.abs(daysOverdue)}d`;
+                            statusStyle = 'text-blue-700 bg-blue-50';
+                          } else if (daysOverdue === 0) {
+                            statusText = 'Open · Due today';
+                            statusStyle = 'text-amber-700 bg-amber-50';
+                          } else {
+                            statusText = 'Open';
+                            statusStyle = 'text-blue-700 bg-blue-50';
+                          }
+                          
+                          // Add autopilot state if not active
+                          if (invoice.autopilot_state === 'paused_replied') {
+                            statusText = `Open · Paused (reply)`;
+                            statusStyle = 'text-amber-700 bg-amber-50';
+                          } else if (invoice.autopilot_state === 'paused_manual') {
+                            statusText = `Open · Paused`;
+                            statusStyle = 'text-amber-700 bg-amber-50';
+                          }
+                        } else {
+                          statusText = invoice.status?.replace('_', ' ') || 'Unknown';
+                          statusStyle = 'text-slate-600 bg-slate-100';
+                        }
+                        
+                        return { text: statusText, style: statusStyle };
+                      };
+                      
+                      const status = getCombinedStatus();
                       
                       return (
                         <tr key={invoice.invoice_id} className="border-b border-slate-100 table-row-hover">
                           <td className="py-3 px-4">
-                            <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                            <span className="text-sm font-medium text-slate-900">
                               {invoice.stripe_invoice_id?.slice(-8).toUpperCase()}
                             </span>
                           </td>
@@ -268,46 +328,20 @@ export default function Invoices({ user }) {
                               <p className="text-xs text-slate-500">{invoice.customer?.email}</p>
                             </div>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-right">
                             <span className="text-sm font-semibold text-slate-900 tabular-nums">
                               {formatCurrency(invoice.amount_due_cents, invoice.currency)}
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-sm text-slate-700 tabular-nums">
+                            <span className="text-sm text-slate-600 tabular-nums">
                               {formatDate(invoice.due_date, timezone)}
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            {isPaid ? (
-                              <span className={`text-sm font-medium ${paidInfo.color}`}>
-                                {paidInfo.text}
-                              </span>
-                            ) : daysOverdue !== null && daysOverdue > 0 ? (
-                              <span className="text-sm font-medium text-rose-600">
-                                {daysOverdue} days late
-                              </span>
-                            ) : daysOverdue !== null && daysOverdue < 0 ? (
-                              <span className="text-sm text-slate-500">
-                                Due in {Math.abs(daysOverdue)} days
-                              </span>
-                            ) : daysOverdue === 0 ? (
-                              <span className="text-sm font-medium text-amber-600">
-                                Due today
-                              </span>
-                            ) : (
-                              <span className="text-sm text-slate-400">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge className={`${getStatusBadge(invoice.status)} border`}>
-                              {invoice.status?.replace('_', ' ')}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge className={`${getStateBadge(invoice.autopilot_state)} border`}>
-                              {formatState(invoice.autopilot_state)}
-                            </Badge>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${status.style}`}>
+                              {status.text}
+                            </span>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <Link to={`/invoices/${invoice.invoice_id}`}>
