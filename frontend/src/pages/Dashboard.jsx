@@ -195,17 +195,15 @@ export default function Dashboard({ user }) {
                   <tbody>
                     {invoices.map((invoice) => {
                       const isPaid = invoice.status === 'paid';
-                      const dueDate = invoice.due_date ? new Date(invoice.due_date) : null;
-                      const today = new Date();
-                      const daysOverdue = dueDate ? Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)) : null;
+                      const timezone = workspace?.timezone || 'America/New_York';
+                      const daysOverdue = invoice.due_date ? getDaysDiff(invoice.due_date) : null;
                       
                       // For paid invoices, calculate days to pay
                       let timelineText = '-';
                       let timelineColor = 'text-slate-400';
                       
-                      if (isPaid && dueDate && invoice.updated_at) {
-                        const paidDate = new Date(invoice.updated_at);
-                        const daysDiff = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
+                      if (isPaid && invoice.due_date && invoice.updated_at) {
+                        const daysDiff = getDaysDiff(invoice.due_date, invoice.updated_at);
                         if (daysDiff <= 0) {
                           timelineText = `${Math.abs(daysDiff)} days early`;
                           timelineColor = 'text-emerald-600';
@@ -245,8 +243,8 @@ export default function Dashboard({ user }) {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-sm text-slate-700">
-                              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                            <span className="text-sm text-slate-700 tabular-nums">
+                              {formatDate(invoice.due_date, timezone)}
                             </span>
                           </td>
                           <td className="py-3 px-4">
