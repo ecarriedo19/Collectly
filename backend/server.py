@@ -1999,6 +1999,9 @@ async def run_scheduler_job():
         for workspace in workspaces:
             workspace_id = workspace["workspace_id"]
             
+            # Update health status
+            await update_health_status(workspace_id, "scheduler", "ok")
+            
             # Check connections
             gmail_conn = await db.gmail_connections.find_one(
                 {"workspace_id": workspace_id},
