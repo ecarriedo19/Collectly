@@ -1,0 +1,120 @@
+{
+  "identity": {
+    "name": "Collectly",
+    "persona": "E1 - The Anti-AI Designer",
+    "tone": "Financial Precision, Trustworthy, Modern, Clean",
+    "aesthetic": "Stripe-like Flat UI, High Contrast, Data-First"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Plus Jakarta Sans, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "installation": "import '@fontsource/plus-jakarta-sans'; import '@fontsource/inter'; import '@fontsource/jetbrains-mono';",
+    "rules": [
+      "Use 'Plus Jakarta Sans' for all Headings (h1-h6). Weight: 600 or 700.",
+      "Use 'Inter' for all body text, inputs, and table data. Weight: 400 or 500.",
+      "Use 'JetBrains Mono' for financial figures, invoice numbers, and API keys.",
+      "Headings must use 'tracking-tight' (-0.025em).",
+      "Overlines/Labels must be Uppercase, text-xs, font-semibold, tracking-wider."
+    ]
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#4F46E5",
+        "foreground": "#FFFFFF",
+        "hover": "#4338CA"
+      },
+      "secondary": {
+        "DEFAULT": "#0F172A",
+        "foreground": "#FFFFFF"
+      },
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "border": "#E2E8F0",
+      "muted": "#64748B",
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    },
+    "usage": [
+      "App Background: bg-slate-50 (#F8FAFC)",
+      "Card/Panel Background: bg-white (#FFFFFF)",
+      "Primary Action: bg-indigo-600 hover:bg-indigo-700 text-white",
+      "Text Primary: text-slate-900",
+      "Text Secondary: text-slate-500",
+      "Borders: border-slate-200"
+    ]
+  },
+  "layout": {
+    "structure": "Sidebar Navigation (Left) + Top Header + Main Content Area",
+    "grid_system": "Tailwind Grid",
+    "spacing": {
+      "page_padding": "p-8 md:p-12",
+      "card_padding": "p-6",
+      "gap": "gap-6"
+    },
+    "sidebar": {
+      "width": "w-64",
+      "background": "bg-slate-900",
+      "text": "text-slate-300",
+      "active_item": "bg-indigo-600/10 text-indigo-400 border-r-2 border-indigo-500"
+    }
+  },
+  "components": {
+    "buttons": {
+      "style": "rounded-md font-medium transition-all active:scale-95",
+      "primary": "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm",
+      "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+      "ghost": "hover:bg-slate-100 text-slate-600"
+    },
+    "cards": {
+      "style": "bg-white border border-slate-200 rounded-lg shadow-sm",
+      "header": "px-6 py-4 border-b border-slate-100 flex justify-between items-center",
+      "content": "p-6"
+    },
+    "tables": {
+      "style": "w-full text-sm text-left",
+      "header": "bg-slate-50 text-slate-500 font-medium uppercase tracking-wider text-xs py-3 px-4 border-b border-slate-200",
+      "row": "border-b border-slate-100 hover:bg-slate-50/50 transition-colors",
+      "cell": "py-3 px-4 text-slate-700"
+    },
+    "badges": {
+      "style": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+      "success": "bg-emerald-50 text-emerald-700 border border-emerald-100",
+      "pending": "bg-amber-50 text-amber-700 border border-amber-100",
+      "overdue": "bg-rose-50 text-rose-700 border border-rose-100"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": "Use 'shadow-sm' for cards. Avoid large drop shadows. Use 'shadow-none' for a flatter look if preferred.",
+    "borders": "Use 'border-slate-200' for subtle separation. 1px borders are preferred over shadows for depth.",
+    "glassmorphism": "Use sparingly. Only for sticky headers: 'bg-white/80 backdrop-blur-md border-b border-slate-200'.",
+    "gradients": "NO gradients for backgrounds. Use solid colors. Subtle gradients allowed on primary buttons only."
+  },
+  "assets": {
+    "logo_placeholder": "https://logo.clearbit.com/stripe.com",
+    "user_avatar": "https://images.pexels.com/photos/5082976/pexels-photo-5082976.jpeg",
+    "empty_state_illustration": "https://images.pexels.com/photos/35129364/pexels-photo-35129364.jpeg",
+    "icons": "Use 'lucide-react' for all UI icons. Stroke width: 1.5px."
+  },
+  "instructions_to_main_agent": [
+    "Implement the 'Flat UI' aesthetic: White cards, 1px slate-200 borders, minimal shadows.",
+    "Use the Sidebar Layout for all authenticated pages (Dashboard, Invoices, Settings).",
+    "Ensure all financial data (amounts, dates) uses 'JetBrains Mono' or 'Inter' with tabular-nums.",
+    "For the 'Integrations' page, use a grid of cards for Gmail and Stripe.",
+    "The 'Dashboard' must follow the 'Inverted Pyramid' rule: Key Metrics (Total AR, Overdue) at the top, followed by Activity Timeline and Recent Invoices.",
+    "Use 'sonner' for all toast notifications.",
+    "Add 'data-testid' to all interactive elements."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Do not use generic centered layouts.",
+    "Create depth through z-index and subtle borders, not heavy shadows.",
+    "Every interaction needs micro-animations (hover, active).",
+    "Use 2-3x more spacing than feels comfortable (p-6, p-8).",
+    "Never use AI assistant emojis.",
+    "Prioritize Shadcn components but customize them to match the 'Flat UI' style defined here."
+  ]
+}
