@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { toast } from "sonner";
+import { formatDate, formatDateTime } from "../utils/dateUtils";
 import { 
   ArrowLeft,
   ExternalLink,
@@ -26,12 +27,14 @@ export default function InvoiceDetail({ user }) {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [note, setNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
 
   useEffect(() => {
+    fetchWorkspace();
     fetchInvoice();
   }, [invoiceId]);
 
