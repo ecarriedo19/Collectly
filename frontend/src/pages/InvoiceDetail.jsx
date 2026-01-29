@@ -430,15 +430,15 @@ export default function InvoiceDetail({ user }) {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Created</p>
-                  <p className="text-sm text-slate-900 mt-1">
-                    {invoice.created_at ? new Date(invoice.created_at).toLocaleString() : '-'}
+                  <p className="text-sm text-slate-900 mt-1 tabular-nums">
+                    {formatDateTime(invoice.created_at, workspace?.timezone || 'America/New_York')}
                   </p>
                 </div>
                 {invoice.last_step_sent_at && (
                   <div>
                     <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Last Reminder</p>
-                    <p className="text-sm text-slate-900 mt-1">
-                      {new Date(invoice.last_step_sent_at).toLocaleString()}
+                    <p className="text-sm text-slate-900 mt-1 tabular-nums">
+                      {formatDateTime(invoice.last_step_sent_at, workspace?.timezone || 'America/New_York')}
                     </p>
                   </div>
                 )}
