@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import { API } from "../App";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { formatDate, getDaysDiff } from "../utils/dateUtils";
@@ -12,7 +11,6 @@ import {
   Search, 
   RefreshCw, 
   ExternalLink,
-  Filter,
   X
 } from "lucide-react";
 
