@@ -76,54 +76,7 @@ export default function Invoices({ user }) {
     }).format(cents / 100);
   };
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      open: "bg-blue-50 text-blue-700 border-blue-100",
-      past_due: "bg-rose-50 text-rose-700 border-rose-100",
-      paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
-      void: "bg-slate-50 text-slate-600 border-slate-200",
-      draft: "bg-slate-50 text-slate-600 border-slate-200",
-      uncollectible: "bg-slate-50 text-slate-600 border-slate-200"
-    };
-    return styles[status] || styles.open;
-  };
-
-  const getStateBadge = (state) => {
-    const styles = {
-      active: "bg-indigo-50 text-indigo-700 border-indigo-100",
-      paused_replied: "bg-amber-50 text-amber-700 border-amber-100",
-      paused_manual: "bg-amber-50 text-amber-700 border-amber-100",
-      stopped_paid: "bg-emerald-50 text-emerald-700 border-emerald-100",
-      stopped_manual: "bg-slate-50 text-slate-600 border-slate-200"
-    };
-    return styles[state] || styles.active;
-  };
-
-  const formatState = (state) => {
-    const labels = {
-      active: "Active",
-      paused_replied: "Paused - Replied",
-      paused_manual: "Paused",
-      stopped_paid: "Stopped - Paid",
-      stopped_manual: "Stopped"
-    };
-    return labels[state] || state;
-  };
-
   const timezone = workspace?.timezone || 'America/New_York';
-
-  const formatPaidInfo = (invoice) => {
-    // If paid, show when it was paid or days to pay
-    if (invoice.updated_at && invoice.due_date) {
-      const daysDiff = getDaysDiff(invoice.due_date, invoice.updated_at);
-      if (daysDiff <= 0) {
-        return { text: `${Math.abs(daysDiff)} days early`, color: 'text-emerald-600' };
-      } else {
-        return { text: `${daysDiff} days late`, color: 'text-slate-500' };
-      }
-    }
-    return { text: '-', color: 'text-slate-400' };
-  };
 
   const clearFilters = () => {
     setStatusFilter('all');
