@@ -276,8 +276,8 @@ export default function Invoices({ user }) {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-sm text-slate-700">
-                              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                            <span className="text-sm text-slate-700 tabular-nums">
+                              {formatDate(invoice.due_date, timezone)}
                             </span>
                           </td>
                           <td className="py-3 px-4">
