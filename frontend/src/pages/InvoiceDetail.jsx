@@ -4,7 +4,6 @@ import Layout from "../components/Layout";
 import { API } from "../App";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
 import { Textarea } from "../components/ui/textarea";
 import { toast } from "sonner";
 import { formatDate, formatDateTime, getDaysDiff } from "../utils/dateUtils";
