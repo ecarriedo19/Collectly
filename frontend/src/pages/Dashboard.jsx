@@ -185,54 +185,94 @@ export default function Dashboard({ user }) {
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Customer</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Amount</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Timeline</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Autopilot</th>
                       <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider text-slate-500"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((invoice) => (
-                      <tr key={invoice.invoice_id} className="border-b border-slate-100 table-row-hover">
-                        <td className="py-3 px-4">
-                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                            {invoice.stripe_invoice_id?.slice(-8).toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">{invoice.customer?.name || 'Unknown'}</p>
-                            <p className="text-xs text-slate-500">{invoice.customer?.email}</p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                            {formatCurrency(invoice.amount_due_cents, invoice.currency)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm text-slate-700">
-                            {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={`${getStatusBadge(invoice.status)} border`}>
-                            {invoice.status?.replace('_', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={`${getStateBadge(invoice.autopilot_state)} border`}>
-                            {formatState(invoice.autopilot_state)}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <Link to={`/invoices/${invoice.invoice_id}`}>
-                            <Button variant="ghost" size="sm" data-testid={`view-invoice-${invoice.invoice_id}`}>
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                    {invoices.map((invoice) => {
+                      const isPaid = invoice.status === 'paid';
+                      const dueDate = invoice.due_date ? new Date(invoice.due_date) : null;
+                      const today = new Date();
+                      const daysOverdue = dueDate ? Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)) : null;
+                      
+                      // For paid invoices, calculate days to pay
+                      let timelineText = '-';
+                      let timelineColor = 'text-slate-400';
+                      
+                      if (isPaid && dueDate && invoice.updated_at) {
+                        const paidDate = new Date(invoice.updated_at);
+                        const daysDiff = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
+                        if (daysDiff <= 0) {
+                          timelineText = `${Math.abs(daysDiff)} days early`;
+                          timelineColor = 'text-emerald-600';
+                        } else {
+                          timelineText = `${daysDiff} days late`;
+                          timelineColor = 'text-slate-500';
+                        }
+                      } else if (!isPaid && daysOverdue !== null) {
+                        if (daysOverdue > 0) {
+                          timelineText = `${daysOverdue} days late`;
+                          timelineColor = 'text-rose-600 font-medium';
+                        } else if (daysOverdue < 0) {
+                          timelineText = `Due in ${Math.abs(daysOverdue)} days`;
+                          timelineColor = 'text-slate-500';
+                        } else {
+                          timelineText = 'Due today';
+                          timelineColor = 'text-amber-600 font-medium';
+                        }
+                      }
+                      
+                      return (
+                        <tr key={invoice.invoice_id} className="border-b border-slate-100 table-row-hover">
+                          <td className="py-3 px-4">
+                            <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                              {invoice.stripe_invoice_id?.slice(-8).toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{invoice.customer?.name || 'Unknown'}</p>
+                              <p className="text-xs text-slate-500">{invoice.customer?.email}</p>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                              {formatCurrency(invoice.amount_due_cents, invoice.currency)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-sm text-slate-700">
+                              {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`text-sm ${timelineColor}`}>
+                              {timelineText}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={`${getStatusBadge(invoice.status)} border`}>
+                              {invoice.status?.replace('_', ' ')}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={`${getStateBadge(invoice.autopilot_state)} border`}>
+                              {formatState(invoice.autopilot_state)}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Link to={`/invoices/${invoice.invoice_id}`}>
+                              <Button variant="ghost" size="sm" data-testid={`view-invoice-${invoice.invoice_id}`}>
+                                <ExternalLink className="w-4 h-4" />
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
