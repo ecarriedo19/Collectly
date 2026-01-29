@@ -31,8 +31,21 @@ export default function Integrations({ user }) {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
+    fetchWorkspace();
     fetchStatuses();
   }, []);
+
+  const fetchWorkspace = async () => {
+    try {
+      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspace(data.workspace);
+      }
+    } catch (error) {
+      console.error('Error fetching workspace:', error);
+    }
+  };
 
   const fetchStatuses = async () => {
     setLoading(true);
