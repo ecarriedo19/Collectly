@@ -519,7 +519,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
             <Zap className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-semibold text-slate-900">Set up Collectly</h1>
-          <p className="text-slate-600 mt-2">Let's get your automated invoice follow-ups running</p>
+          <p className="text-slate-600 mt-2">Let&apos;s get your automated invoice follow-ups running</p>
         </div>
 
         {/* Progress Steps */}

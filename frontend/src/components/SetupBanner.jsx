@@ -9,17 +9,6 @@ export default function SetupBanner() {
   const [status, setStatus] = useState(null);
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    // Check if dismissed in this session
-    const isDismissed = sessionStorage.getItem('setup_banner_dismissed');
-    if (isDismissed) {
-      setDismissed(true);
-      return;
-    }
-    
-    fetchStatus();
-  }, []);
-
   const fetchStatus = async () => {
     try {
       const res = await fetch(`${API}/onboarding/status`, { credentials: 'include' });
@@ -32,6 +21,17 @@ export default function SetupBanner() {
       console.error('Error fetching onboarding status:', error);
     }
   };
+
+  useEffect(() => {
+    // Check if dismissed in this session
+    const isDismissed = sessionStorage.getItem('setup_banner_dismissed');
+    if (isDismissed) {
+      setDismissed(true);
+      return;
+    }
+    
+    fetchStatus();
+  }, []);
 
   const dismiss = () => {
     setDismissed(true);
