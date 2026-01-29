@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { formatDate, getDaysDiff } from "../utils/dateUtils";
 import { 
   Search, 
   RefreshCw, 
@@ -20,14 +21,31 @@ export default function Invoices({ user }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [workspace, setWorkspace] = useState(null);
   
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [stateFilter, setStateFilter] = useState(searchParams.get('state') || 'all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
+    fetchWorkspace();
+  }, []);
+
+  useEffect(() => {
     fetchInvoices();
   }, [statusFilter, stateFilter]);
+
+  const fetchWorkspace = async () => {
+    try {
+      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspace(data.workspace);
+      }
+    } catch (error) {
+      console.error('Error fetching workspace:', error);
+    }
+  };
 
   const fetchInvoices = async () => {
     setLoading(true);
