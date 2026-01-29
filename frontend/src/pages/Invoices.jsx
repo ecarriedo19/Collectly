@@ -33,8 +33,8 @@ export default function Invoices({ user }) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statusFilter) params.set('status', statusFilter);
-      if (stateFilter) params.set('autopilot_state', stateFilter);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+      if (stateFilter && stateFilter !== 'all') params.set('autopilot_state', stateFilter);
       params.set('limit', '50');
 
       const res = await fetch(`${API}/invoices?${params.toString()}`, { 
