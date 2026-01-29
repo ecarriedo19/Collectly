@@ -103,8 +103,8 @@ export default function Invoices({ user }) {
   };
 
   const clearFilters = () => {
-    setStatusFilter('');
-    setStateFilter('');
+    setStatusFilter('all');
+    setStateFilter('all');
     setSearchQuery('');
     setSearchParams({});
   };
