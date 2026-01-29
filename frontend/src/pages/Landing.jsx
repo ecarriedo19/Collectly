@@ -177,7 +177,7 @@ function StatusRow({ label, status, type, amount }) {
           {status}
         </span>
       </div>
-      <span className="font-mono text-sm text-slate-700">{amount}</span>
+      <span className="text-sm font-semibold text-slate-700 tabular-nums">{amount}</span>
     </div>
   );
 }
