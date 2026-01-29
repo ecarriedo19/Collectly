@@ -1502,7 +1502,491 @@ async def mark_all_read(request: Request):
     
     return {"success": True}
 
+# ==================== System Health Endpoints ====================
+
+@api_router.get("/health/status")
+async def get_system_health(request: Request):
+    """Get system health status for the workspace"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        return {"status": "no_workspace"}
+    
+    workspace_id = workspace["workspace_id"]
+    now = datetime.now(timezone.utc)
+    
+    # Get health record
+    health = await db.system_health.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0}
+    )
+    
+    if not health:
+        health = {
+            "workspace_id": workspace_id,
+            "stripe_sync": {"status": "never", "last_run": None, "error": None},
+            "stripe_webhook": {"status": "never", "last_received": None},
+            "scheduler": {"status": "never", "last_run": None},
+            "reply_check": {"status": "never", "last_run": None}
+        }
+    
+    # Check connection statuses
+    stripe_conn = await db.stripe_connections.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0, "secret_key": 0, "webhook_secret": 0}
+    )
+    gmail_conn = await db.gmail_connections.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0, "access_token": 0, "refresh_token": 0}
+    )
+    
+    # Calculate warnings
+    warnings = []
+    
+    # Webhook warning (6 hours)
+    if stripe_conn:
+        webhook_last = health.get("stripe_webhook", {}).get("last_received")
+        if webhook_last:
+            webhook_time = datetime.fromisoformat(webhook_last.replace("Z", "+00:00"))
+            if (now - webhook_time).total_seconds() > 6 * 3600:
+                warnings.append({
+                    "type": "webhook_stale",
+                    "message": "No webhook received in 6+ hours. Webhooks may be misconfigured.",
+                    "action": "test_webhook"
+                })
+        else:
+            warnings.append({
+                "type": "webhook_never",
+                "message": "No webhooks received yet. Please configure your Stripe webhook.",
+                "action": "configure_webhook"
+            })
+    
+    # Scheduler warning (30 minutes)
+    scheduler_last = health.get("scheduler", {}).get("last_run")
+    if scheduler_last:
+        scheduler_time = datetime.fromisoformat(scheduler_last.replace("Z", "+00:00"))
+        if (now - scheduler_time).total_seconds() > 30 * 60:
+            warnings.append({
+                "type": "scheduler_delayed",
+                "message": "Scheduler hasn't run in 30+ minutes.",
+                "action": "run_scheduler"
+            })
+    
+    # Sync error warning
+    sync_status = health.get("stripe_sync", {})
+    if sync_status.get("status") == "error":
+        warnings.append({
+            "type": "sync_error",
+            "message": f"Last sync failed: {sync_status.get('error', 'Unknown error')}",
+            "action": "retry_sync"
+        })
+    
+    return {
+        "stripe_connected": stripe_conn is not None,
+        "gmail_connected": gmail_conn is not None,
+        "stripe_sync": health.get("stripe_sync", {}),
+        "stripe_webhook": health.get("stripe_webhook", {}),
+        "scheduler": health.get("scheduler", {}),
+        "reply_check": health.get("reply_check", {}),
+        "warnings": warnings,
+        "onboarding_complete": stripe_conn is not None and gmail_conn is not None
+    }
+
+@api_router.post("/health/test-webhook")
+async def test_webhook(request: Request):
+    """Send a test webhook event to verify webhook configuration"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    # Get Stripe connection
+    stripe_conn = await db.stripe_connections.find_one(
+        {"workspace_id": workspace["workspace_id"]},
+        {"_id": 0}
+    )
+    
+    if not stripe_conn:
+        raise HTTPException(status_code=400, detail="Stripe not connected")
+    
+    # We can't actually trigger a real webhook, but we can verify the endpoint is reachable
+    # For now, just return guidance
+    return {
+        "message": "To test webhooks, create a test invoice in Stripe and mark it as paid.",
+        "webhook_url": f"{os.environ.get('REACT_APP_BACKEND_URL', '')}/api/webhooks/stripe",
+        "tip": "You can also use Stripe CLI to send test events: stripe trigger invoice.paid"
+    }
+
+@api_router.get("/onboarding/status")
+async def get_onboarding_status(request: Request):
+    """Get onboarding status for the workspace"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        return {
+            "has_workspace": False,
+            "steps": {
+                "workspace": False,
+                "stripe": False,
+                "import": False,
+                "gmail": False,
+                "test_email": False,
+                "autopilot": False
+            },
+            "current_step": "workspace",
+            "is_complete": False
+        }
+    
+    workspace_id = workspace["workspace_id"]
+    
+    # Check connections
+    stripe_conn = await db.stripe_connections.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0, "secret_key": 0, "webhook_secret": 0}
+    )
+    gmail_conn = await db.gmail_connections.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0, "access_token": 0, "refresh_token": 0}
+    )
+    
+    # Check if data imported
+    invoice_count = await db.invoices.count_documents({"workspace_id": workspace_id})
+    
+    # Check if test email sent
+    test_email_sent = await db.email_events.find_one({
+        "workspace_id": workspace_id,
+        "event_type": "test_sent"
+    })
+    
+    # Check if autopilot enabled
+    policy = await db.reminder_policies.find_one({
+        "workspace_id": workspace_id,
+        "is_default": True
+    }, {"_id": 0})
+    autopilot_enabled = policy.get("is_enabled", False) if policy else False
+    
+    # Check onboarding completion flag
+    onboarding = await db.workspace_onboarding.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0}
+    )
+    
+    steps = {
+        "workspace": True,
+        "stripe": stripe_conn is not None,
+        "import": invoice_count > 0,
+        "gmail": gmail_conn is not None,
+        "test_email": test_email_sent is not None,
+        "autopilot": autopilot_enabled and (onboarding.get("completed") if onboarding else False)
+    }
+    
+    # Determine current step
+    current_step = "stripe"
+    if steps["stripe"]:
+        current_step = "import"
+    if steps["import"]:
+        current_step = "gmail"
+    if steps["gmail"]:
+        current_step = "test_email"
+    if steps["test_email"]:
+        current_step = "autopilot"
+    if steps["autopilot"]:
+        current_step = "complete"
+    
+    is_complete = all(steps.values())
+    
+    return {
+        "has_workspace": True,
+        "workspace": workspace,
+        "steps": steps,
+        "current_step": current_step,
+        "is_complete": is_complete,
+        "stripe_connected": stripe_conn is not None,
+        "gmail_connected": gmail_conn is not None,
+        "invoice_count": invoice_count,
+        "gmail_email": gmail_conn.get("google_user_email") if gmail_conn else None
+    }
+
+@api_router.get("/onboarding/import-preview")
+async def get_import_preview(request: Request):
+    """Get preview of imported data"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    workspace_id = workspace["workspace_id"]
+    
+    customer_count = await db.customers.count_documents({"workspace_id": workspace_id})
+    open_count = await db.invoices.count_documents({
+        "workspace_id": workspace_id,
+        "status": InvoiceStatus.OPEN
+    })
+    past_due_count = await db.invoices.count_documents({
+        "workspace_id": workspace_id,
+        "status": InvoiceStatus.PAST_DUE
+    })
+    paid_count = await db.invoices.count_documents({
+        "workspace_id": workspace_id,
+        "status": InvoiceStatus.PAID
+    })
+    total_count = await db.invoices.count_documents({"workspace_id": workspace_id})
+    
+    # Get total amounts
+    open_invoices = await db.invoices.find({
+        "workspace_id": workspace_id,
+        "status": {"$in": [InvoiceStatus.OPEN, InvoiceStatus.PAST_DUE]}
+    }, {"amount_due_cents": 1, "currency": 1}).to_list(1000)
+    
+    total_ar = sum(inv.get("amount_due_cents", 0) for inv in open_invoices)
+    currency = open_invoices[0].get("currency", "usd") if open_invoices else "usd"
+    
+    return {
+        "customers": customer_count,
+        "invoices": {
+            "total": total_count,
+            "open": open_count,
+            "past_due": past_due_count,
+            "paid": paid_count
+        },
+        "total_ar_cents": total_ar,
+        "currency": currency
+    }
+
+@api_router.post("/onboarding/send-test-email")
+async def send_test_email(request: Request):
+    """Send a test reminder email to the logged-in user"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    workspace_id = workspace["workspace_id"]
+    
+    # Check Gmail connection
+    gmail_conn = await db.gmail_connections.find_one(
+        {"workspace_id": workspace_id},
+        {"_id": 0}
+    )
+    
+    # Build test email content
+    test_subject = f"Test Reminder from {workspace['name']} via Collectly"
+    test_body = f"""Hi {user['name']},
+
+This is a test reminder email from Collectly.
+
+If you're receiving this, your email integration is working correctly!
+
+Here's what a real reminder would look like:
+
+---
+
+Invoice #INV-1234 for $500.00 is due on 02/15/2026.
+
+Pay now: https://invoice.stripe.com/example
+
+Please let us know if you have any questions.
+
+Best regards,
+{workspace['name']}
+
+Reply to this email if you have questions. Reply 'stop' to pause reminders.
+"""
+    
+    # Try to send via Resend (fallback if Gmail not connected)
+    if resend_api_key:
+        try:
+            params = {
+                "from": os.environ.get("SENDER_EMAIL", "onboarding@resend.dev"),
+                "to": [user["email"]],
+                "subject": test_subject,
+                "text": test_body
+            }
+            
+            await asyncio.to_thread(resend.Emails.send, params)
+            
+            # Log the test email
+            await db.email_events.insert_one({
+                "event_id": f"evt_{uuid.uuid4().hex[:12]}",
+                "workspace_id": workspace_id,
+                "invoice_id": None,
+                "customer_id": None,
+                "direction": "outbound",
+                "event_type": "test_sent",
+                "subject": test_subject,
+                "snippet": "Test email sent successfully",
+                "sent_at": datetime.now(timezone.utc).isoformat(),
+                "metadata_json": {"recipient": user["email"]},
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            return {
+                "success": True,
+                "message": f"Test email sent to {user['email']}",
+                "method": "resend"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to send test email: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to send test email: {str(e)}")
+    else:
+        # Log that we would have sent (for demo)
+        await db.email_events.insert_one({
+            "event_id": f"evt_{uuid.uuid4().hex[:12]}",
+            "workspace_id": workspace_id,
+            "invoice_id": None,
+            "customer_id": None,
+            "direction": "outbound",
+            "event_type": "test_sent",
+            "subject": test_subject,
+            "snippet": "Test email (simulated - no Resend key)",
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+            "metadata_json": {"recipient": user["email"], "simulated": True},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": f"Test email simulated for {user['email']} (Resend not configured)",
+            "method": "simulated"
+        }
+
+@api_router.post("/onboarding/complete")
+async def complete_onboarding(request: Request):
+    """Mark onboarding as complete and enable autopilot"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    workspace_id = workspace["workspace_id"]
+    
+    # Enable default policy
+    await db.reminder_policies.update_one(
+        {"workspace_id": workspace_id, "is_default": True},
+        {"$set": {"is_enabled": True}}
+    )
+    
+    # Mark onboarding complete
+    await db.workspace_onboarding.update_one(
+        {"workspace_id": workspace_id},
+        {"$set": {
+            "workspace_id": workspace_id,
+            "completed": True,
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Onboarding complete! Autopilot is now active."}
+
+@api_router.get("/onboarding/scheduled-preview")
+async def get_scheduled_preview(request: Request):
+    """Get preview of scheduled sends for next 7 days"""
+    user = await require_auth(request)
+    workspace = await get_user_workspace(user["user_id"])
+    
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    
+    workspace_id = workspace["workspace_id"]
+    now = datetime.now(timezone.utc)
+    week_later = now + timedelta(days=7)
+    
+    # Get policy steps
+    policy = await db.reminder_policies.find_one({
+        "workspace_id": workspace_id,
+        "is_default": True
+    }, {"_id": 0})
+    
+    if not policy:
+        return {"scheduled_count": 0, "invoices": []}
+    
+    steps = await db.reminder_steps.find({
+        "policy_id": policy["policy_id"],
+        "is_enabled": True
+    }, {"_id": 0}).sort("step_order", 1).to_list(20)
+    
+    # Get active invoices
+    invoices = await db.invoices.find({
+        "workspace_id": workspace_id,
+        "status": {"$in": [InvoiceStatus.OPEN, InvoiceStatus.PAST_DUE]},
+        "autopilot_state": AutopilotState.ACTIVE
+    }, {"_id": 0}).limit(20).to_list(20)
+    
+    scheduled = []
+    for inv in invoices:
+        if not inv.get("due_date"):
+            continue
+            
+        due_date = datetime.fromisoformat(inv["due_date"].replace("Z", "+00:00"))
+        
+        # Find next applicable step
+        for step in steps:
+            trigger_type = step["trigger_type"]
+            offset = step["trigger_offset_days"]
+            
+            if trigger_type == "before_due":
+                send_date = due_date - timedelta(days=offset)
+            elif trigger_type == "on_due":
+                send_date = due_date
+            else:
+                send_date = due_date + timedelta(days=offset)
+            
+            if now <= send_date <= week_later:
+                # Get customer
+                customer = await db.customers.find_one(
+                    {"customer_id": inv.get("customer_id")},
+                    {"_id": 0}
+                )
+                
+                scheduled.append({
+                    "invoice_id": inv["invoice_id"],
+                    "stripe_invoice_id": inv["stripe_invoice_id"],
+                    "customer_name": customer.get("name") if customer else "Unknown",
+                    "amount_due_cents": inv["amount_due_cents"],
+                    "currency": inv.get("currency", "usd"),
+                    "scheduled_date": send_date.isoformat(),
+                    "step_type": trigger_type,
+                    "step_order": step["step_order"]
+                })
+                break
+    
+    # Sort by scheduled date
+    scheduled.sort(key=lambda x: x["scheduled_date"])
+    
+    return {
+        "scheduled_count": len(scheduled),
+        "invoices": scheduled[:10]  # Return top 10
+    }
+
 # ==================== Scheduler Jobs ====================
+
+async def update_health_status(workspace_id: str, health_type: str, status: str, error: str = None):
+    """Update health status for a workspace"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    update_data = {
+        f"{health_type}.status": status,
+        f"{health_type}.last_run" if health_type != "stripe_webhook" else f"{health_type}.last_received": now
+    }
+    
+    if error:
+        update_data[f"{health_type}.error"] = error
+    elif health_type != "stripe_webhook":
+        update_data[f"{health_type}.error"] = None
+    
+    await db.system_health.update_one(
+        {"workspace_id": workspace_id},
+        {"$set": update_data},
+        upsert=True
+    )
 
 async def run_scheduler_job():
     """Run the reminder scheduler"""
