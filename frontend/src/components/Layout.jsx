@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { API } from "../App";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
 import { 
   LayoutDashboard, 
@@ -26,14 +26,12 @@ const navItems = [
 export default function Layout({ children, user }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      await signOut();
     } catch (error) {
       console.error('Logout error:', error);
     }

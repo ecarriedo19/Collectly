@@ -1,8 +1,18 @@
-import { startGoogleAuth } from "../App";
 import { Button } from "../components/ui/button";
 import { ArrowRight, Mail, CreditCard, Clock, CheckCircle, Zap } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Landing() {
+  const { signIn } = useAuth();
+
+  const handleSignIn = async () => {
+    try {
+      await signIn();
+    } catch (error) {
+      console.error('Sign in error:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50" data-testid="landing-page">
       {/* Navigation */}
@@ -15,7 +25,7 @@ export default function Landing() {
             <span className="text-xl font-semibold text-slate-900 tracking-tight">Collectly</span>
           </div>
           <Button 
-            onClick={startGoogleAuth}
+            onClick={handleSignIn}
             className="bg-indigo-600 hover:bg-indigo-700 text-white btn-active"
             data-testid="nav-login-btn"
           >
@@ -38,7 +48,7 @@ export default function Landing() {
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              onClick={startGoogleAuth}
+              onClick={handleSignIn}
               size="lg"
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 text-lg btn-active"
               data-testid="hero-get-started-btn"
@@ -112,7 +122,7 @@ export default function Landing() {
             Join SaaS companies using Collectly to automate accounts receivable.
           </p>
           <Button 
-            onClick={startGoogleAuth}
+            onClick={handleSignIn}
             size="lg"
             className="bg-white text-slate-900 hover:bg-slate-100 px-8 py-6 text-lg btn-active"
             data-testid="cta-get-started-btn"

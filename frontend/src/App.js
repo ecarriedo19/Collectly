@@ -1,8 +1,15 @@
+/**
+ * Main Application
+ * 
+ * Uses Supabase for authentication and routing.
+ * All protected routes require authentication via AuthProvider.
+ */
+
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
-import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import InvoiceDetail from "./pages/InvoiceDetail";
@@ -12,57 +19,26 @@ import Settings from "./pages/Settings";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import OnboardingWizard from "./components/OnboardingWizard";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API = `${BACKEND_URL}/api`;
+// Legacy API export for components that haven't been migrated yet
+// TODO: Remove after full migration to api.js service layer
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+export const API = `${SUPABASE_URL}/functions/v1`;
 
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-export const getAuthRedirectUrl = () => {
-  return window.location.origin + '/dashboard';
-};
-
-export const startGoogleAuth = () => {
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  const redirectUrl = window.location.origin + '/dashboard';
-  window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-};
-
+/**
+ * Protected Route Component
+ * Redirects to landing page if not authenticated
+ */
 function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const [user, setUser] = useState(null);
+  const { user, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    // If user data was passed from AuthCallback, use it
-    if (location.state?.user) {
-      setUser(location.state.user);
-      setIsAuthenticated(true);
-      return;
+    if (!loading && !isAuthenticated) {
+      navigate('/', { replace: true });
     }
+  }, [loading, isAuthenticated, navigate]);
 
-    const checkAuth = async () => {
-      try {
-        const response = await fetch(`${API}/auth/me`, {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          throw new Error('Not authenticated');
-        }
-        
-        const userData = await response.json();
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (error) {
-        setIsAuthenticated(false);
-        navigate('/', { replace: true });
-      }
-    };
-
-    checkAuth();
-  }, [navigate, location.state]);
-
-  if (isAuthenticated === null) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="animate-pulse text-slate-500">Loading...</div>
@@ -74,18 +50,50 @@ function ProtectedRoute({ children }) {
     return null;
   }
 
-  return typeof children === 'function' ? children({ user }) : children;
+  // Convert Supabase user to app user format
+  const appUser = user ? {
+    user_id: user.id,
+    email: user.email,
+    name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0],
+    picture: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+  } : null;
+
+  return typeof children === 'function' ? children({ user: appUser }) : children;
 }
 
+/**
+ * Auth Callback Handler
+ * Supabase handles this automatically via detectSessionInUrl
+ * This component just shows a loading state during the redirect
+ */
+function AuthCallback() {
+  const { isAuthenticated, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading) {
+      if (isAuthenticated) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [loading, isAuthenticated, navigate]);
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+        <p className="text-slate-500">Signing you in...</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * App Router - handles all routing
+ */
 function AppRouter() {
-  const location = useLocation();
-
-  // Check URL fragment for session_id synchronously during render
-  // This prevents race conditions by processing new session_id FIRST
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
@@ -159,11 +167,16 @@ function AppRouter() {
   );
 }
 
+/**
+ * Main App Component
+ */
 function App() {
   return (
     <BrowserRouter>
-      <AppRouter />
-      <Toaster position="top-right" richColors />
+      <AuthProvider>
+        <AppRouter />
+        <Toaster position="top-right" richColors />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
