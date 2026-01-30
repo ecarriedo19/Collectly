@@ -42,12 +42,29 @@ export function createUserClient(req: Request): SupabaseClient {
  * Get the authenticated user from a request
  */
 export async function getUser(req: Request) {
-  const supabase = createUserClient(req)
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    throw new Error('Missing Authorization header')
+  }
+  
+  const token = authHeader.replace('Bearer ', '')
+  
+  // Use admin client to verify the JWT
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
   
   if (error || !user) {
+    console.error('Auth error:', error)
     throw new Error('Unauthorized')
   }
+  
+  // Create a user-scoped client for RLS queries
+  const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  })
   
   return { user, supabase }
 }
