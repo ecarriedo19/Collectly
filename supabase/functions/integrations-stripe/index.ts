@@ -21,12 +21,14 @@ serve(async (req: Request) => {
     const { user, supabase } = await getUser(req)
     const method = req.method
 
-    // Get user's workspace
-    const { data: membership, error: memberError } = await supabase
+    // Get user's workspace (use admin client to bypass RLS)
+    const { data: membership, error: memberError } = await supabaseAdmin
       .from('workspace_members')
       .select('workspace_id')
       .eq('user_id', user.id)
       .single()
+
+    console.log('Workspace lookup:', { userId: user.id, membership, error: memberError?.message })
 
     if (memberError || !membership) {
       return errorResponse('Workspace not found', 404)
