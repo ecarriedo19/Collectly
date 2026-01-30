@@ -5,7 +5,7 @@
 -- ============================================
 -- EXTENSIONS
 -- ============================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- UUID generation is built-in to PostgreSQL 13+ via gen_random_uuid()
 
 -- ============================================
 -- ENUMS
@@ -80,7 +80,7 @@ CREATE TABLE public.users (
 
 -- Workspaces (tenant container)
 CREATE TABLE public.workspaces (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   timezone TEXT NOT NULL DEFAULT 'America/New_York',
   owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -90,7 +90,7 @@ CREATE TABLE public.workspaces (
 
 -- Workspace members (user-workspace relationship)
 CREATE TABLE public.workspace_members (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   role member_role NOT NULL DEFAULT 'member',
@@ -104,7 +104,7 @@ CREATE TABLE public.workspace_members (
 
 -- Stripe connections
 CREATE TABLE public.stripe_connections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL UNIQUE REFERENCES public.workspaces(id) ON DELETE CASCADE,
   stripe_account_id TEXT,
   secret_key TEXT NOT NULL, -- TODO: Move to Vault
@@ -116,7 +116,7 @@ CREATE TABLE public.stripe_connections (
 
 -- Gmail connections
 CREATE TABLE public.gmail_connections (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL UNIQUE REFERENCES public.workspaces(id) ON DELETE CASCADE,
   google_user_email TEXT NOT NULL,
   access_token TEXT NOT NULL,  -- TODO: Move to Vault
@@ -132,7 +132,7 @@ CREATE TABLE public.gmail_connections (
 
 -- Customers (synced from Stripe)
 CREATE TABLE public.customers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   stripe_customer_id TEXT NOT NULL,
   name TEXT,
@@ -143,7 +143,7 @@ CREATE TABLE public.customers (
 
 -- Invoices
 CREATE TABLE public.invoices (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   stripe_invoice_id TEXT NOT NULL,
   stripe_customer_id TEXT NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE public.invoices (
 
 -- Email events (communication log)
 CREATE TABLE public.email_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   invoice_id UUID REFERENCES public.invoices(id) ON DELETE CASCADE,
   customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
@@ -187,7 +187,7 @@ CREATE TABLE public.email_events (
 
 -- Reminder policies
 CREATE TABLE public.reminder_policies (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
@@ -204,7 +204,7 @@ CREATE TABLE public.reminder_policies (
 
 -- Reminder steps
 CREATE TABLE public.reminder_steps (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   policy_id UUID NOT NULL REFERENCES public.reminder_policies(id) ON DELETE CASCADE,
   step_order INTEGER NOT NULL,
   trigger_type trigger_type NOT NULL,
@@ -221,7 +221,7 @@ CREATE TABLE public.reminder_steps (
 
 -- Notifications
 CREATE TABLE public.notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id UUID NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   type notification_type NOT NULL,
