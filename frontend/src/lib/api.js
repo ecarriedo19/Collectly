@@ -7,18 +7,45 @@
 
 import { supabase } from './supabase'
 
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL
+
 /**
- * Invoke a Supabase Edge Function
+ * Invoke a Supabase Edge Function with proper HTTP method
  */
 async function invokeFunction(functionName, options = {}) {
-  const { data, error } = await supabase.functions.invoke(functionName, options)
+  const { method = 'POST', body } = options
   
-  if (error) {
-    console.error(`API error (${functionName}):`, error)
-    throw new Error(error.message || 'API request failed')
+  // Get current session for auth token
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    throw new Error('Not authenticated')
   }
   
-  return data
+  const url = `${SUPABASE_URL}/functions/v1/${functionName}`
+  
+  const fetchOptions = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  }
+  
+  // Only add body for non-GET requests
+  if (body && method !== 'GET') {
+    fetchOptions.body = JSON.stringify(body)
+  }
+  
+  const response = await fetch(url, fetchOptions)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    console.error(`API error (${functionName}):`, errorData)
+    throw new Error(errorData.error || `Request failed with status ${response.status}`)
+  }
+  
+  return response.json()
 }
 
 /**
