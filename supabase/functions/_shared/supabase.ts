@@ -88,10 +88,32 @@ export async function getUserWorkspace(userId: string) {
     .single()
   
   if (error) {
+    console.error('getUserWorkspace error:', error)
     return null
   }
   
   return data
+}
+
+/**
+ * Get user and workspace from request (convenience function)
+ * Uses admin client for workspace lookup to bypass RLS
+ */
+export async function getUserWithWorkspace(req: Request) {
+  const { user, supabase } = await getUser(req)
+  
+  const { data: membership, error: memberError } = await supabaseAdmin
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_id', user.id)
+    .single()
+  
+  if (memberError || !membership) {
+    console.error('Workspace not found for user:', user.id, memberError)
+    throw new Error('Workspace not found')
+  }
+  
+  return { user, supabase, workspaceId: membership.workspace_id }
 }
 
 /**

@@ -10,7 +10,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser, supabaseAdmin } from '../_shared/supabase.ts'
+import { getUserWithWorkspace, supabaseAdmin } from '../_shared/supabase.ts'
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -18,35 +18,10 @@ serve(async (req: Request) => {
   if (corsResponse) return corsResponse
 
   try {
-    const { user, supabase } = await getUser(req)
+    const { user, supabase, workspaceId } = await getUserWithWorkspace(req)
     const url = new URL(req.url)
     const action = url.searchParams.get('action')
     const method = req.method
-
-    // Get user's workspace
-    const { data: membership, error: memberError } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (memberError || !membership) {
-      return jsonResponse({
-        has_workspace: false,
-        steps: {
-          workspace: false,
-          stripe: false,
-          import: false,
-          gmail: false,
-          test_email: false,
-          autopilot: false,
-        },
-        current_step: 'workspace',
-        is_complete: false,
-      })
-    }
-
-    const workspaceId = membership.workspace_id
 
     // GET - Get onboarding status
     if (method === 'GET' && !action) {

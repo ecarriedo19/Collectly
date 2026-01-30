@@ -6,7 +6,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser } from '../_shared/supabase.ts'
+import { getUserWithWorkspace } from '../_shared/supabase.ts'
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -18,21 +18,8 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { user, supabase } = await getUser(req)
+    const { user, supabase, workspaceId } = await getUserWithWorkspace(req)
     const url = new URL(req.url)
-
-    // Get user's workspace
-    const { data: membership, error: memberError } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (memberError || !membership) {
-      return errorResponse('Workspace not found', 404)
-    }
-
-    const workspaceId = membership.workspace_id
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100)
     const offset = parseInt(url.searchParams.get('offset') || '0')
     const search = url.searchParams.get('search')

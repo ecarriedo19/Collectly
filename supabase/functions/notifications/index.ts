@@ -9,7 +9,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser } from '../_shared/supabase.ts'
+import { getUserWithWorkspace } from '../_shared/supabase.ts'
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -17,22 +17,9 @@ serve(async (req: Request) => {
   if (corsResponse) return corsResponse
 
   try {
-    const { user, supabase } = await getUser(req)
+    const { user, supabase, workspaceId } = await getUserWithWorkspace(req)
     const url = new URL(req.url)
     const method = req.method
-
-    // Get user's workspace
-    const { data: membership, error: memberError } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (memberError || !membership) {
-      return jsonResponse({ notifications: [] })
-    }
-
-    const workspaceId = membership.workspace_id
 
     // GET - List notifications
     if (method === 'GET') {

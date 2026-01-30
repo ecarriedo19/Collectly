@@ -10,7 +10,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@14?target=deno'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser, supabaseAdmin } from '../_shared/supabase.ts'
+import { getUserWithWorkspace, supabaseAdmin } from '../_shared/supabase.ts'
 import { mapStripeStatus } from '../_shared/stripe.ts'
 
 serve(async (req: Request) => {
@@ -23,20 +23,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { user, supabase } = await getUser(req)
-
-    // Get user's workspace
-    const { data: membership, error: memberError } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (memberError || !membership) {
-      return errorResponse('Workspace not found', 404)
-    }
-
-    const workspaceId = membership.workspace_id
+    const { user, workspaceId } = await getUserWithWorkspace(req)
 
     // Get Stripe connection
     const { data: connection, error: connError } = await supabaseAdmin
@@ -168,25 +155,22 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error('Stripe sync error:', error)
 
+    // Handle workspace not found error
+    if (error instanceof Error && error.message === 'Workspace not found') {
+      return errorResponse('Workspace not found', 404)
+    }
+
     // Log error to system health
     try {
-      const { user, supabase } = await getUser(req)
-      const { data: membership } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (membership) {
-        await supabaseAdmin
-          .from('system_health')
-          .update({
-            stripe_sync_status: 'error',
-            stripe_sync_last_run: new Date().toISOString(),
-            stripe_sync_error: error instanceof Error ? error.message : 'Unknown error',
-          })
-          .eq('workspace_id', membership.workspace_id)
-      }
+      const { workspaceId } = await getUserWithWorkspace(req)
+      await supabaseAdmin
+        .from('system_health')
+        .update({
+          stripe_sync_status: 'error',
+          stripe_sync_last_run: new Date().toISOString(),
+          stripe_sync_error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .eq('workspace_id', workspaceId)
     } catch {
       // Ignore logging errors
     }

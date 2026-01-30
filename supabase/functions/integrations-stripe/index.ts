@@ -10,7 +10,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Stripe from 'https://esm.sh/stripe@14?target=deno'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser, supabaseAdmin } from '../_shared/supabase.ts'
+import { getUserWithWorkspace, supabaseAdmin } from '../_shared/supabase.ts'
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -18,23 +18,8 @@ serve(async (req: Request) => {
   if (corsResponse) return corsResponse
 
   try {
-    const { user, supabase } = await getUser(req)
+    const { user, supabase, workspaceId } = await getUserWithWorkspace(req)
     const method = req.method
-
-    // Get user's workspace (use admin client to bypass RLS)
-    const { data: membership, error: memberError } = await supabaseAdmin
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', user.id)
-      .single()
-
-    console.log('Workspace lookup:', { userId: user.id, membership, error: memberError?.message })
-
-    if (memberError || !membership) {
-      return errorResponse('Workspace not found', 404)
-    }
-
-    const workspaceId = membership.workspace_id
 
     // GET - Get Stripe connection status
     if (method === 'GET') {

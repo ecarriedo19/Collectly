@@ -9,7 +9,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders, handleCors, jsonResponse, errorResponse } from '../_shared/cors.ts'
-import { getUser, supabaseAdmin } from '../_shared/supabase.ts'
+import { getUser, getUserWithWorkspace, supabaseAdmin } from '../_shared/supabase.ts'
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -92,11 +92,14 @@ serve(async (req: Request) => {
       const body = await req.json()
       const { name, timezone } = body
 
-      // Get user's workspace
+      const { user, supabase, workspaceId } = await getUserWithWorkspace(req)
+
+      // Get role to check permissions
       const { data: membership, error: memberError } = await supabase
         .from('workspace_members')
-        .select('workspace_id, role')
+        .select('role')
         .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
         .single()
 
       if (memberError || !membership) {
@@ -119,7 +122,7 @@ serve(async (req: Request) => {
       const { data: workspace, error } = await supabase
         .from('workspaces')
         .update(updates)
-        .eq('id', membership.workspace_id)
+        .eq('id', workspaceId)
         .select()
         .single()
 
