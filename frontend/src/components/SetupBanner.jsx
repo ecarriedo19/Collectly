@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { API } from "../App";
+import api from "../lib/api";
 import { Button } from "./ui/button";
 import { AlertTriangle, X, ArrowRight } from "lucide-react";
 
@@ -11,12 +11,9 @@ export default function SetupBanner() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch(`${API}/onboarding/status`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
-        setVisible(!data.is_complete);
-      }
+      const data = await api.onboarding.getStatus();
+      setStatus(data);
+      setVisible(!data.is_complete);
     } catch (error) {
       console.error('Error fetching onboarding status:', error);
     }

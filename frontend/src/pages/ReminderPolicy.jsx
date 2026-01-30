@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -34,11 +34,8 @@ export default function ReminderPolicy({ user }) {
   const fetchPolicy = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/policies/default`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setPolicy(data);
-      }
+      const data = await api.policies.getDefault();
+      setPolicy(data);
     } catch (error) {
       console.error('Error fetching policy:', error);
     } finally {
@@ -49,21 +46,11 @@ export default function ReminderPolicy({ user }) {
   const updatePolicy = async (updates) => {
     setSaving(true);
     try {
-      const res = await fetch(`${API}/policies/${policy.policy_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(updates)
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPolicy(data);
-        toast.success('Policy updated');
-      } else {
-        toast.error('Failed to update policy');
-      }
+      const data = await api.policies.update(policy.policy_id, updates);
+      setPolicy(data);
+      toast.success('Policy updated');
     } catch (error) {
+      console.error('Error updating policy:', error);
       toast.error('Error updating policy');
     } finally {
       setSaving(false);
@@ -72,20 +59,11 @@ export default function ReminderPolicy({ user }) {
 
   const updateStep = async (stepId, updates) => {
     try {
-      const res = await fetch(`${API}/policies/${policy.policy_id}/steps/${stepId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(updates)
-      });
-
-      if (res.ok) {
-        fetchPolicy();
-        toast.success('Step updated');
-      } else {
-        toast.error('Failed to update step');
-      }
+      await api.policies.updateStep(policy.policy_id, stepId, updates);
+      fetchPolicy();
+      toast.success('Step updated');
     } catch (error) {
+      console.error('Error updating step:', error);
       toast.error('Error updating step');
     }
   };
@@ -94,18 +72,11 @@ export default function ReminderPolicy({ user }) {
     if (!confirm('Are you sure you want to delete this step?')) return;
     
     try {
-      const res = await fetch(`${API}/policies/${policy.policy_id}/steps/${stepId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        fetchPolicy();
-        toast.success('Step deleted');
-      } else {
-        toast.error('Failed to delete step');
-      }
+      await api.policies.deleteStep(policy.policy_id, stepId);
+      fetchPolicy();
+      toast.success('Step deleted');
     } catch (error) {
+      console.error('Error deleting step:', error);
       toast.error('Error deleting step');
     }
   };
@@ -114,27 +85,18 @@ export default function ReminderPolicy({ user }) {
     const newStepOrder = (policy.steps?.length || 0) + 1;
     
     try {
-      const res = await fetch(`${API}/policies/${policy.policy_id}/steps`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          step_order: newStepOrder,
-          trigger_type: 'after_due',
-          trigger_offset_days: 21,
-          subject_template: 'Follow-up: Invoice {{invoice_number}}',
-          body_template: 'Hi {{customer_name}},\n\nThis is a follow-up regarding Invoice {{invoice_number}} for {{amount}}.\n\nPay here: {{hosted_invoice_url}}\n\n{{company_name}}\n\n{{footer}}',
-          is_enabled: true
-        })
+      await api.policies.createStep(policy.policy_id, {
+        step_order: newStepOrder,
+        trigger_type: 'after_due',
+        trigger_offset_days: 21,
+        subject_template: 'Follow-up: Invoice {{invoice_number}}',
+        body_template: 'Hi {{customer_name}},\n\nThis is a follow-up regarding Invoice {{invoice_number}} for {{amount}}.\n\nPay here: {{hosted_invoice_url}}\n\n{{company_name}}\n\n{{footer}}',
+        is_enabled: true
       });
-
-      if (res.ok) {
-        fetchPolicy();
-        toast.success('Step added');
-      } else {
-        toast.error('Failed to add step');
-      }
+      fetchPolicy();
+      toast.success('Step added');
     } catch (error) {
+      console.error('Error adding step:', error);
       toast.error('Error adding step');
     }
   };

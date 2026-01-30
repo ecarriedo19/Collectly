@@ -269,6 +269,13 @@ export const onboarding = {
   },
   
   /**
+   * Get scheduled reminders preview
+   */
+  async getScheduledPreview() {
+    return invokeFunction('onboarding?action=scheduled-preview', { method: 'GET' })
+  },
+  
+  /**
    * Send test email
    */
   async sendTestEmail() {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
@@ -27,11 +27,8 @@ export default function SystemStatus({ workspace, compact = false }) {
   const fetchHealth = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/health/status`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setHealth(data);
-      }
+      const data = await api.health.getStatus();
+      setHealth(data);
     } catch (error) {
       console.error('Error fetching health status:', error);
     } finally {
@@ -42,16 +39,9 @@ export default function SystemStatus({ workspace, compact = false }) {
   const runScheduler = async () => {
     setActionLoading('scheduler');
     try {
-      const res = await fetch(`${API}/jobs/run-scheduler`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (res.ok) {
-        toast.success('Scheduler run triggered');
-        fetchHealth();
-      } else {
-        toast.error('Failed to run scheduler');
-      }
+      await api.jobs.runScheduler();
+      toast.success('Scheduler run triggered');
+      fetchHealth();
     } catch (error) {
       toast.error('Error running scheduler');
     } finally {
@@ -62,20 +52,11 @@ export default function SystemStatus({ workspace, compact = false }) {
   const retrySync = async () => {
     setActionLoading('sync');
     try {
-      const res = await fetch(`${API}/integrations/stripe/sync`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
-        fetchHealth();
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Sync failed');
-      }
+      const data = await api.integrations.stripe.sync();
+      toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
+      fetchHealth();
     } catch (error) {
-      toast.error('Error syncing');
+      toast.error(error.message || 'Sync failed');
     } finally {
       setActionLoading(null);
     }

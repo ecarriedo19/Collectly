@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from '../lib/api';
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -35,11 +35,8 @@ export default function Invoices({ user }) {
 
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data.workspace);
-      }
+      const data = await api.workspaces.get();
+      setWorkspace(data.workspace);
     } catch (error) {
       console.error('Error fetching workspace:', error);
     }
@@ -48,20 +45,13 @@ export default function Invoices({ user }) {
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-      if (stateFilter && stateFilter !== 'all') params.set('autopilot_state', stateFilter);
-      params.set('limit', '50');
-
-      const res = await fetch(`${API}/invoices?${params.toString()}`, { 
-        credentials: 'include' 
+      const data = await api.invoices.list({
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        autopilot_state: stateFilter !== 'all' ? stateFilter : undefined,
+        limit: 50,
       });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setInvoices(data.invoices);
-        setTotal(data.total);
-      }
+      setInvoices(data.invoices);
+      setTotal(data.total);
     } catch (error) {
       console.error('Error fetching invoices:', error);
     } finally {

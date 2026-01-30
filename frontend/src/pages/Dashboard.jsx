@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { formatDate, getDaysDiff } from "../utils/dateUtils";
@@ -31,25 +31,16 @@ export default function Dashboard({ user }) {
     setLoading(true);
     try {
       // Fetch workspace
-      const wsRes = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
-      if (wsRes.ok) {
-        const wsData = await wsRes.json();
-        setWorkspace(wsData.workspace);
-      }
+      const wsData = await api.workspaces.get();
+      setWorkspace(wsData.workspace);
 
       // Fetch summary
-      const summaryRes = await fetch(`${API}/dashboard/summary`, { credentials: 'include' });
-      if (summaryRes.ok) {
-        const summaryData = await summaryRes.json();
-        setSummary(summaryData);
-      }
+      const summaryData = await api.dashboard.getSummary();
+      setSummary(summaryData);
 
       // Fetch recent invoices
-      const invRes = await fetch(`${API}/invoices?limit=10`, { credentials: 'include' });
-      if (invRes.ok) {
-        const invData = await invRes.json();
-        setInvoices(invData.invoices);
-      }
+      const invData = await api.invoices.list({ limit: 10 });
+      setInvoices(invData.invoices);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {

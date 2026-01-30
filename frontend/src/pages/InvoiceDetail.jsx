@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from '../lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -39,11 +39,8 @@ export default function InvoiceDetail({ user }) {
 
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data.workspace);
-      }
+      const data = await api.workspaces.get();
+      setWorkspace(data.workspace);
     } catch (error) {
       console.error('Error fetching workspace:', error);
     }
@@ -52,18 +49,14 @@ export default function InvoiceDetail({ user }) {
   const fetchInvoice = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/invoices/${invoiceId}`, { 
-        credentials: 'include' 
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        setInvoice(data);
-      } else if (res.status === 404) {
-        navigate('/invoices');
-      }
+      const data = await api.invoices.get(invoiceId);
+      setInvoice(data);
     } catch (error) {
       console.error('Error fetching invoice:', error);
+      // Navigate to invoices list if not found
+      if (error.message?.includes('not found') || error.message?.includes('404')) {
+        navigate('/invoices');
+      }
     } finally {
       setLoading(false);
     }
@@ -72,21 +65,12 @@ export default function InvoiceDetail({ user }) {
   const updateInvoice = async (updates) => {
     setActionLoading(true);
     try {
-      const res = await fetch(`${API}/invoices/${invoiceId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(updates)
-      });
-
-      if (res.ok) {
-        toast.success('Invoice updated');
-        fetchInvoice();
-      } else {
-        toast.error('Failed to update invoice');
-      }
+      await api.invoices.update(invoiceId, updates);
+      toast.success('Invoice updated');
+      fetchInvoice();
     } catch (error) {
-      toast.error('Error updating invoice');
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice');
     } finally {
       setActionLoading(false);
     }
@@ -100,22 +84,13 @@ export default function InvoiceDetail({ user }) {
 
     setAddingNote(true);
     try {
-      const res = await fetch(`${API}/invoices/${invoiceId}/note`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ note })
-      });
-
-      if (res.ok) {
-        toast.success('Note added');
-        setNote('');
-        fetchInvoice();
-      } else {
-        toast.error('Failed to add note');
-      }
+      await api.invoices.addNote(invoiceId, note);
+      toast.success('Note added');
+      setNote('');
+      fetchInvoice();
     } catch (error) {
-      toast.error('Error adding note');
+      console.error('Error adding note:', error);
+      toast.error('Failed to add note');
     } finally {
       setAddingNote(false);
     }

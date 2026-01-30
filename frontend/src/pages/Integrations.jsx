@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -38,11 +38,8 @@ export default function Integrations({ user }) {
 
   const fetchWorkspace = async () => {
     try {
-      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data.workspace);
-      }
+      const data = await api.workspaces.get();
+      setWorkspace(data.workspace);
     } catch (error) {
       console.error('Error fetching workspace:', error);
     }
@@ -51,20 +48,13 @@ export default function Integrations({ user }) {
   const fetchStatuses = async () => {
     setLoading(true);
     try {
-      const [gmailRes, stripeRes] = await Promise.all([
-        fetch(`${API}/integrations/gmail/status`, { credentials: 'include' }),
-        fetch(`${API}/integrations/stripe/status`, { credentials: 'include' })
+      const [gmailData, stripeData] = await Promise.all([
+        api.integrations.gmail.getStatus(),
+        api.integrations.stripe.getStatus()
       ]);
 
-      if (gmailRes.ok) {
-        const data = await gmailRes.json();
-        setGmailStatus(data);
-      }
-
-      if (stripeRes.ok) {
-        const data = await stripeRes.json();
-        setStripeStatus(data);
-      }
+      setGmailStatus(gmailData);
+      setStripeStatus(stripeData);
     } catch (error) {
       console.error('Error fetching integration statuses:', error);
     } finally {
@@ -91,15 +81,9 @@ export default function Integrations({ user }) {
 
   const disconnectGmail = async () => {
     try {
-      const res = await fetch(`${API}/integrations/gmail/disconnect`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        toast.success('Gmail disconnected');
-        setGmailStatus({ connected: false });
-      }
+      await api.integrations.gmail.disconnect();
+      toast.success('Gmail disconnected');
+      setGmailStatus({ connected: false });
     } catch (error) {
       toast.error('Failed to disconnect Gmail');
     }
@@ -118,28 +102,13 @@ export default function Integrations({ user }) {
 
     setConnecting(true);
     try {
-      const res = await fetch(`${API}/integrations/stripe/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          secret_key: stripeKey,
-          webhook_secret: webhookSecret || null
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success('Stripe connected!');
-        setStripeStatus(data);
-        setStripeKey('');
-        setWebhookSecret('');
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Failed to connect Stripe');
-      }
+      const data = await api.integrations.stripe.connect(stripeKey, webhookSecret || null);
+      toast.success('Stripe connected!');
+      setStripeStatus(data);
+      setStripeKey('');
+      setWebhookSecret('');
     } catch (error) {
-      toast.error('Error connecting Stripe');
+      toast.error(error.message || 'Failed to connect Stripe');
     } finally {
       setConnecting(false);
     }
@@ -147,15 +116,9 @@ export default function Integrations({ user }) {
 
   const disconnectStripe = async () => {
     try {
-      const res = await fetch(`${API}/integrations/stripe/disconnect`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        toast.success('Stripe disconnected');
-        setStripeStatus({ connected: false });
-      }
+      await api.integrations.stripe.disconnect();
+      toast.success('Stripe disconnected');
+      setStripeStatus({ connected: false });
     } catch (error) {
       toast.error('Failed to disconnect Stripe');
     }
@@ -164,21 +127,11 @@ export default function Integrations({ user }) {
   const syncStripe = async () => {
     setSyncing(true);
     try {
-      const res = await fetch(`${API}/integrations/stripe/sync`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
-        fetchStatuses();
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Sync failed');
-      }
+      const data = await api.integrations.stripe.sync();
+      toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
+      fetchStatuses();
     } catch (error) {
-      toast.error('Error syncing Stripe data');
+      toast.error(error.message || 'Sync failed');
     } finally {
       setSyncing(false);
     }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -40,13 +40,10 @@ export default function Settings({ user }) {
   const fetchWorkspace = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/workspaces/me`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data.workspace);
-        setName(data.workspace?.name || '');
-        setTimezone(data.workspace?.timezone || 'America/New_York');
-      }
+      const data = await api.workspaces.get();
+      setWorkspace(data.workspace);
+      setName(data.workspace?.name || '');
+      setTimezone(data.workspace?.timezone || 'America/New_York');
     } catch (error) {
       console.error('Error fetching workspace:', error);
     } finally {
@@ -62,21 +59,11 @@ export default function Settings({ user }) {
 
     setSaving(true);
     try {
-      const res = await fetch(`${API}/workspaces/me`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name, timezone })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setWorkspace(data.workspace);
-        toast.success('Settings saved');
-      } else {
-        toast.error('Failed to save settings');
-      }
+      const data = await api.workspaces.update({ name, timezone });
+      setWorkspace(data.workspace);
+      toast.success('Settings saved');
     } catch (error) {
+      console.error('Error saving settings:', error);
       toast.error('Error saving settings');
     } finally {
       setSaving(false);
@@ -86,18 +73,8 @@ export default function Settings({ user }) {
   const sendWeeklyDigest = async () => {
     setSendingDigest(true);
     try {
-      const res = await fetch(`${API}/jobs/send-weekly-digest`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Digest sent to ${data.recipient}`);
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Failed to send digest');
-      }
+      // TODO: Implement weekly digest Edge Function
+      toast.info('Weekly digest feature coming soon');
     } catch (error) {
       toast.error('Error sending digest');
     } finally {
@@ -106,21 +83,8 @@ export default function Settings({ user }) {
   };
 
   const seedDemoData = async () => {
-    try {
-      const res = await fetch(`${API}/demo/seed`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Created ${data.customers_created} customers and ${data.invoices_created} invoices`);
-      } else {
-        toast.error('Failed to seed demo data');
-      }
-    } catch (error) {
-      toast.error('Error seeding demo data');
-    }
+    // TODO: Implement demo data seeding
+    toast.info('Demo data feature coming soon');
   };
 
   if (loading) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { API } from "../App";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -61,25 +61,22 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
 
   const fetchOnboardingStatus = async () => {
     try {
-      const res = await fetch(`${API}/onboarding/status`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
-        setStripeConnected(data.steps.stripe);
-        setGmailConnected(data.steps.gmail);
-        setGmailEmail(data.gmail_email);
-        
-        // Determine starting step
-        if (!data.steps.stripe) setCurrentStep(0);
-        else if (!data.steps.import) setCurrentStep(1);
-        else if (!data.steps.gmail) setCurrentStep(2);
-        else if (!data.steps.test_email) setCurrentStep(3);
-        else setCurrentStep(4);
-        
-        // If stripe connected, fetch import preview
-        if (data.steps.stripe) {
-          fetchImportPreview();
-        }
+      const data = await api.onboarding.getStatus();
+      setStatus(data);
+      setStripeConnected(data.steps.stripe);
+      setGmailConnected(data.steps.gmail);
+      setGmailEmail(data.gmail_email);
+      
+      // Determine starting step
+      if (!data.steps.stripe) setCurrentStep(0);
+      else if (!data.steps.import) setCurrentStep(1);
+      else if (!data.steps.gmail) setCurrentStep(2);
+      else if (!data.steps.test_email) setCurrentStep(3);
+      else setCurrentStep(4);
+      
+      // If stripe connected, fetch import preview
+      if (data.steps.stripe) {
+        fetchImportPreview();
       }
     } catch (error) {
       console.error('Error fetching onboarding status:', error);
@@ -88,11 +85,8 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
 
   const fetchImportPreview = async () => {
     try {
-      const res = await fetch(`${API}/onboarding/import-preview`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setImportData(data);
-      }
+      const data = await api.onboarding.getPreview();
+      setImportData(data);
     } catch (error) {
       console.error('Error fetching import preview:', error);
     }
@@ -100,11 +94,8 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
 
   const fetchScheduledPreview = async () => {
     try {
-      const res = await fetch(`${API}/onboarding/scheduled-preview`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setScheduledPreview(data);
-      }
+      const data = await api.onboarding.getScheduledPreview();
+      setScheduledPreview(data);
     } catch (error) {
       console.error('Error fetching scheduled preview:', error);
     }
@@ -122,29 +113,15 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API}/integrations/stripe/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
-          secret_key: stripeKey,
-          webhook_secret: webhookSecret || null
-        })
-      });
-
-      if (res.ok) {
-        toast.success('Stripe connected!');
-        setStripeConnected(true);
-        setStripeKey('');
-        setWebhookSecret('');
-        // Auto-advance to import step
-        setCurrentStep(1);
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Failed to connect Stripe');
-      }
+      await api.integrations.stripe.connect(stripeKey, webhookSecret || null);
+      toast.success('Stripe connected!');
+      setStripeConnected(true);
+      setStripeKey('');
+      setWebhookSecret('');
+      // Auto-advance to import step
+      setCurrentStep(1);
     } catch (error) {
-      toast.error('Error connecting Stripe');
+      toast.error(error.message || 'Failed to connect Stripe');
     } finally {
       setLoading(false);
     }
@@ -153,21 +130,11 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
   const syncStripe = async () => {
     setSyncing(true);
     try {
-      const res = await fetch(`${API}/integrations/stripe/sync`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
-        await fetchImportPreview();
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Sync failed');
-      }
+      const data = await api.integrations.stripe.sync();
+      toast.success(`Synced ${data.customers_synced} customers and ${data.invoices_synced} invoices`);
+      await fetchImportPreview();
     } catch (error) {
-      toast.error('Error syncing');
+      toast.error(error.message || 'Sync failed');
     } finally {
       setSyncing(false);
     }
@@ -191,21 +158,11 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
   const sendTestEmail = async () => {
     setSendingTest(true);
     try {
-      const res = await fetch(`${API}/onboarding/send-test-email`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        toast.success(data.message);
-        setTestEmailSent(true);
-      } else {
-        const error = await res.json();
-        toast.error(error.detail || 'Failed to send test email');
-      }
+      const data = await api.onboarding.sendTestEmail();
+      toast.success(data.message);
+      setTestEmailSent(true);
     } catch (error) {
-      toast.error('Error sending test email');
+      toast.error(error.message || 'Failed to send test email');
     } finally {
       setSendingTest(false);
     }
@@ -214,20 +171,12 @@ export default function OnboardingWizard({ user, onComplete, onSkip }) {
   const completeOnboarding = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/onboarding/complete`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        toast.success('Onboarding complete! Autopilot is now active.');
-        if (onComplete) onComplete();
-        navigate('/dashboard', { replace: true });
-      } else {
-        toast.error('Failed to complete onboarding');
-      }
+      await api.onboarding.complete();
+      toast.success('Onboarding complete! Autopilot is now active.');
+      if (onComplete) onComplete();
+      navigate('/dashboard', { replace: true });
     } catch (error) {
-      toast.error('Error completing onboarding');
+      toast.error(error.message || 'Failed to complete onboarding');
     } finally {
       setLoading(false);
     }
