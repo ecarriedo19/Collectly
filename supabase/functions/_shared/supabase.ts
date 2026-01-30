@@ -43,19 +43,27 @@ export function createUserClient(req: Request): SupabaseClient {
  */
 export async function getUser(req: Request) {
   const authHeader = req.headers.get('Authorization')
+  console.log('Auth header present:', !!authHeader)
+  
   if (!authHeader) {
     throw new Error('Missing Authorization header')
   }
   
   const token = authHeader.replace('Bearer ', '')
+  console.log('Token length:', token.length)
+  console.log('Token preview:', token.substring(0, 50) + '...')
   
   // Use admin client to verify the JWT
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
+  
+  console.log('getUser result:', { hasUser: !!user, error: error?.message })
   
   if (error || !user) {
     console.error('Auth error:', error)
     throw new Error('Unauthorized')
   }
+  
+  console.log('Authenticated user:', user.id, user.email)
   
   // Create a user-scoped client for RLS queries
   const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {

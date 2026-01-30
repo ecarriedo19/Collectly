@@ -16,13 +16,22 @@ async function invokeFunction(functionName, options = {}) {
   const { method = 'POST', body } = options
   
   // Get current session for auth token
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
   
-  if (!session) {
+  console.log('Session check:', { 
+    hasSession: !!session, 
+    hasAccessToken: !!session?.access_token,
+    tokenPreview: session?.access_token?.substring(0, 50) + '...',
+    sessionError 
+  })
+  
+  if (!session || !session.access_token) {
+    console.error('No valid session found')
     throw new Error('Not authenticated')
   }
   
   const url = `${SUPABASE_URL}/functions/v1/${functionName}`
+  console.log('Calling:', method, url)
   
   const fetchOptions = {
     method,
