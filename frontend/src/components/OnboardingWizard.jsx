@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
-import { formatDate } from "../utils/dateUtils";
+import { formatDate } from "../lib/date";
 import { 
   CheckCircle, 
   CreditCard, 

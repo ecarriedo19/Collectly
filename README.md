@@ -84,33 +84,66 @@ RESEND_API_KEY=your-resend-api-key (optional)
 
 ```
 collectly/
+├── .cursor/skills/              # Cursor AI skills
+├── docs/
+│   └── ARCHITECTURE.md          # Technical documentation
+├── frontend/
+│   ├── public/                  # Static assets
+│   └── src/
+│       ├── components/
+│       │   ├── ui/              # Shadcn UI components
+│       │   ├── Layout.jsx       # App layout
+│       │   ├── OnboardingWizard.jsx
+│       │   ├── SetupBanner.jsx
+│       │   └── SystemStatus.jsx
+│       ├── contexts/            # React contexts
+│       │   └── AuthContext.jsx
+│       ├── hooks/               # Custom hooks
+│       │   └── use-toast.js
+│       ├── lib/                 # Utilities & API
+│       │   ├── api.js           # API service layer
+│       │   ├── date.js          # Date formatting
+│       │   ├── supabase.js      # Supabase client
+│       │   └── utils.js         # Tailwind utilities
+│       ├── pages/               # Route pages
+│       │   ├── Dashboard.jsx
+│       │   ├── Invoices.jsx
+│       │   ├── InvoiceDetail.jsx
+│       │   ├── Integrations.jsx
+│       │   ├── ReminderPolicy.jsx
+│       │   ├── Settings.jsx
+│       │   └── ...
+│       ├── types/               # TypeScript types
+│       │   └── index.ts
+│       ├── App.js               # Main app + routing
+│       └── index.js             # Entry point
 ├── supabase/
 │   ├── config.toml              # Supabase configuration
 │   ├── migrations/              # Database migrations
-│   │   └── 001_initial_schema.sql
+│   │   ├── 001_initial_schema.sql
+│   │   └── ...
 │   └── functions/               # Edge Functions
 │       ├── _shared/             # Shared utilities
-│       ├── workspaces/          # Workspace CRUD
-│       ├── invoices/            # Invoice management
+│       │   ├── cors.ts
+│       │   ├── gmail.ts
+│       │   ├── resend.ts
+│       │   ├── stripe.ts
+│       │   └── supabase.ts
+│       ├── check-replies/       # Detect Gmail replies
+│       ├── customers/           # Customer list
 │       ├── dashboard/           # KPI metrics
+│       ├── health/              # System health
+│       ├── integrations-gmail/  # Gmail OAuth
 │       ├── integrations-stripe/ # Stripe connection
-│       ├── integrations-gmail/  # Gmail connection
+│       ├── invoices/            # Invoice management
+│       ├── notifications/       # User notifications
+│       ├── onboarding/          # Onboarding flow
+│       ├── policies/            # Reminder policies
+│       ├── scheduler/           # Send reminders
 │       ├── stripe-sync/         # Sync from Stripe
 │       ├── stripe-webhook/      # Handle Stripe events
-│       ├── policies/            # Reminder policies
-│       ├── onboarding/          # Onboarding flow
-│       ├── scheduler/           # Send reminders
-│       ├── check-replies/       # Detect replies
-│       └── ...
-├── frontend/
-│   ├── src/
-│   │   ├── App.js               # Main app
-│   │   ├── pages/               # Page components
-│   │   ├── components/          # UI components
-│   │   └── lib/                 # Utilities
-│   └── package.json
-├── docs/
-│   └── ARCHITECTURE.md          # Technical documentation
+│       ├── weekly-digest/       # Weekly AR email
+│       └── workspaces/          # Workspace CRUD
 └── README.md
 ```
 
@@ -154,17 +187,27 @@ collectly/
 
 ### Completed
 - [x] Project structure and Supabase setup
-- [x] Database schema with RLS
-- [x] All Edge Functions
-- [x] Gmail OAuth integration
-- [x] Stripe integration
-- [x] Reminder scheduler
+- [x] Database schema with RLS (14 tables)
+- [x] All core Edge Functions (15 functions)
+- [x] Gmail OAuth integration + email sending
+- [x] Stripe integration + webhook handling
+- [x] Reminder scheduler (pg_cron)
 - [x] Reply detection
+- [x] Frontend with Supabase client
+- [x] API service layer
+- [x] Weekly digest Edge Function
+- [x] TypeScript types for frontend
 
-### In Progress
-- [ ] Frontend migration to Supabase client
-- [ ] Real-time notifications
+### MVP Sprint (In Progress)
+- [ ] Stripe sync with UI-configurable schedule
+- [ ] TypeScript migration for frontend (.jsx → .tsx)
+- [ ] CORS restriction for production
+- [ ] pg_cron jobs setup in production
+
+### Post-MVP
+- [ ] Real-time notifications (Supabase Realtime)
 - [ ] Test coverage
+- [ ] Error monitoring (Sentry)
 - [ ] Production deployment
 
 ## License

@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { formatDate, getDaysDiff } from "../utils/dateUtils";
+import { formatDate, getDaysDiff } from "../lib/date";
 import SystemStatus from "../components/SystemStatus";
 import SetupBanner from "../components/SetupBanner";
 import { 

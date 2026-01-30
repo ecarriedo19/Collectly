@@ -3,7 +3,7 @@ import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
-import { formatDateTime } from "../utils/dateUtils";
+import { formatDateTime } from "../lib/date";
 import { 
   CheckCircle, 
   AlertTriangle, 
