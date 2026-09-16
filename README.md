@@ -168,4 +168,4 @@ Working MVP, in active development; not deployed publicly. Core flows (sign-in, 
 
 ## License
 
-No license has been chosen yet; all rights reserved by the author.
+Released under the [MIT License](LICENSE).
