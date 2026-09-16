@@ -1,215 +1,171 @@
 # Collectly
 
-**Automated invoice follow-ups for SaaS businesses.**
+Automated invoice follow-ups for SaaS businesses: sync unpaid invoices from Stripe and chase them with polite reminders sent from your own Gmail.
 
-Collectly connects to your Stripe and Gmail accounts to automate payment reminders. It syncs invoices from Stripe, sends personalized email reminders from your Gmail, automatically pauses when customers reply, and stops when invoices are paid.
+Collectly is a multi-tenant web app for founders and finance teams who spend too much time chasing late payments. You connect a Stripe account and a Gmail account; Collectly pulls in your open invoices, sends a configurable sequence of reminder emails before and after each due date, pauses the sequence automatically when a customer replies, and stops it once Stripe reports the invoice as paid. Emails come from your own inbox, so replies land in the normal thread and deliverability is better than a no-reply address.
 
 ## Features
 
-- **Stripe Integration**: Connect your Stripe account to automatically sync customers and invoices
-- **Gmail Integration**: Send reminders from your own Gmail account for better deliverability
-- **Smart Autopilot**: Automatically pauses reminders when customers reply
-- **Customizable Sequences**: Configure reminder timing and templates
-- **Real-time Dashboard**: Track open invoices, past due amounts, and collection progress
-- **Multi-tenant**: Secure workspace isolation for multiple users
+- **Google sign-in and workspaces** - Supabase Auth with Google OAuth; each user gets a workspace, and all data is isolated per workspace with Postgres Row Level Security.
+- **Stripe integration** - connect with a Stripe secret key, sync customers and open invoices, and process `invoice.paid`, `invoice.payment_succeeded`, `invoice.payment_failed` and `invoice.voided` webhooks.
+- **Gmail integration** - OAuth connection with `gmail.send` / `gmail.readonly` scopes; reminders are sent as the user and threaded.
+- **Reminder policies** - an editable sequence of steps (before due, on due, after due, with day offsets) using templates with placeholders such as `{{customer_name}}`, `{{amount}}` and `{{invoice_url}}`. A default five-step policy is created for each workspace.
+- **Autopilot states** - per-invoice state (active, paused on reply, paused manually, stopped on payment, stopped manually) with a per-customer weekly email cap.
+- **Reply detection** - checks Gmail threads for customer replies, pauses the reminders and raises a notification.
+- **Dashboard and invoice views** - open and past-due totals, invoice list with filters, invoice detail with email timeline and notes.
+- **Onboarding wizard** - guided Stripe and Gmail setup with an email preview and test send.
+- **Weekly digest** - accounts-receivable summary email via Resend.
+- **Health check** - system status endpoint surfaced in the UI.
 
-## Tech Stack
+## Architecture
 
-- **Frontend**: React 19 + Tailwind CSS + Shadcn UI
-- **Backend**: Supabase Edge Functions (TypeScript/Deno)
-- **Database**: Supabase PostgreSQL with Row Level Security
-- **Authentication**: Supabase Auth (Google OAuth)
-- **Scheduler**: Supabase pg_cron
-- **Hosting**: Cloudflare Pages (Frontend) + Supabase (Backend)
+```mermaid
+flowchart LR
+  subgraph Browser
+    UI[React SPA<br/>Tailwind + shadcn/ui]
+  end
 
-## Getting Started
+  subgraph Supabase
+    Auth[Auth<br/>Google OAuth]
+    EF[Edge Functions<br/>Deno / TypeScript]
+    DB[(Postgres + RLS)]
+  end
+
+  Stripe[Stripe API]
+  Gmail[Gmail API]
+  Resend[Resend]
+  Cron[Scheduled trigger<br/>e.g. pg_cron]
+
+  UI -- supabase-js --> Auth
+  UI -- REST + JWT --> EF
+  EF --> DB
+  EF -- sync invoices --> Stripe
+  Stripe -- webhooks --> EF
+  EF -- send reminders / read replies --> Gmail
+  EF -- weekly digest --> Resend
+  Cron -- scheduler, check-replies, stripe-sync, weekly-digest --> EF
+```
+
+- **Frontend** (`frontend/`): Create React App (via CRACO) single-page app. It authenticates with Supabase and calls Edge Functions through a small service layer in `src/lib/api.js`.
+- **Backend** (`supabase/functions/`): one Edge Function per resource (`invoices`, `policies`, `dashboard`, ...) plus background jobs (`scheduler`, `check-replies`, `stripe-sync`, `weekly-digest`) meant to be invoked on a schedule. Shared Stripe, Gmail, Resend and auth helpers live in `_shared/`.
+- **Database** (`supabase/migrations/`): 13 tables covering users, workspaces, integrations, customers, invoices, email events, reminder policies/steps, notifications and onboarding state. A trigger creates a workspace and default policy for each new user.
+
+More detail, including the schema and API reference, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, React Router 7, Tailwind CSS, shadcn/ui (Radix), Recharts, CRACO |
+| Backend | Supabase Edge Functions (Deno, TypeScript) |
+| Database | Supabase Postgres with Row Level Security |
+| Auth | Supabase Auth (Google OAuth) |
+| Integrations | Stripe API, Gmail API, Resend |
+
+## Getting started
 
 ### Prerequisites
 
-- Node.js 18+
-- Supabase CLI (`npm install -g supabase`)
-- A Supabase account (free tier works for development)
+- Node.js 18+ and npm
+- [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker (for the local Supabase stack)
+- A Google Cloud OAuth client with the Gmail API enabled
+- A Stripe account (test mode is fine)
 
-### Local Development
+### Environment variables
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/collectly.git
-   cd collectly
-   ```
+Frontend - copy `frontend/.env.example` to `frontend/.env.local`:
 
-2. **Set up Supabase**
-   ```bash
-   # Start local Supabase
-   supabase start
-   
-   # Apply migrations
-   supabase db push
-   ```
+| Name | Purpose |
+|------|---------|
+| `REACT_APP_SUPABASE_URL` | Supabase project URL (`http://localhost:54321` locally) |
+| `REACT_APP_SUPABASE_ANON_KEY` | Supabase anon key (public; access is enforced by RLS) |
+| `REACT_APP_GOOGLE_CLIENT_ID` | Google OAuth client ID used to start the Gmail connection |
 
-3. **Configure environment variables**
-   ```bash
-   # Frontend (.env.local)
-   cp frontend/.env.example frontend/.env.local
-   # Edit with your Supabase URL and anon key
-   ```
+Supabase / Edge Functions - copy `supabase/.env.example` to `supabase/.env` locally, or use `supabase secrets set` in production:
 
-4. **Start the frontend**
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
+| Name | Purpose |
+|------|---------|
+| `GOOGLE_CLIENT_ID` | Google OAuth client (sign-in and Gmail token exchange) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `RESEND_API_KEY` | Resend API key for the weekly digest (optional) |
+| `RESEND_FROM_EMAIL` | Sender address for digest emails (optional) |
 
-5. **Access the app**
-   - Frontend: http://localhost:3000
-   - Supabase Studio: http://localhost:54323
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are provided to Edge Functions automatically by Supabase.
 
-### Environment Variables
+Each user's Stripe secret key and webhook signing secret are entered in the app's Integrations page, not in environment variables.
 
-#### Frontend
-```env
-REACT_APP_SUPABASE_URL=http://localhost:54321
-REACT_APP_SUPABASE_ANON_KEY=your-anon-key
+### Install and run
+
+```bash
+# 1. Start the local Supabase stack and apply migrations
+supabase start
+supabase db reset          # applies supabase/migrations
+
+# 2. Serve Edge Functions locally
+supabase functions serve --env-file supabase/.env
+
+# 3. Run the frontend
+cd frontend
+npm install
+npm start                  # http://localhost:3000
 ```
 
-#### Supabase (Dashboard > Settings > Secrets)
-```env
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-RESEND_API_KEY=your-resend-api-key (optional)
+Supabase Studio runs at http://localhost:54323.
+
+To receive Stripe webhooks, deploy (or serve) `stripe-webhook` without JWT verification, since Stripe does not send a Supabase JWT:
+
+```bash
+supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
-## Project Structure
+The background functions (`scheduler`, `check-replies`, `stripe-sync`, `weekly-digest`) are invoked with a POST request. Schedule them with pg_cron or any external cron; the schedule itself is not part of the migrations yet.
+
+### Build
+
+```bash
+cd frontend && npm run build   # outputs frontend/build
+```
+
+## Project structure
 
 ```
-collectly/
-├── .cursor/skills/              # Cursor AI skills
+.
 ├── docs/
-│   └── ARCHITECTURE.md          # Technical documentation
+│   └── ARCHITECTURE.md          # Schema, API reference, design notes
 ├── frontend/
-│   ├── public/                  # Static assets
+│   ├── public/
 │   └── src/
-│       ├── components/
-│       │   ├── ui/              # Shadcn UI components
-│       │   ├── Layout.jsx       # App layout
-│       │   ├── OnboardingWizard.jsx
-│       │   ├── SetupBanner.jsx
-│       │   └── SystemStatus.jsx
-│       ├── contexts/            # React contexts
-│       │   └── AuthContext.jsx
-│       ├── hooks/               # Custom hooks
-│       │   └── use-toast.js
-│       ├── lib/                 # Utilities & API
-│       │   ├── api.js           # API service layer
-│       │   ├── date.js          # Date formatting
-│       │   ├── supabase.js      # Supabase client
-│       │   └── utils.js         # Tailwind utilities
-│       ├── pages/               # Route pages
-│       │   ├── Dashboard.jsx
-│       │   ├── Invoices.jsx
-│       │   ├── InvoiceDetail.jsx
-│       │   ├── Integrations.jsx
-│       │   ├── ReminderPolicy.jsx
-│       │   ├── Settings.jsx
-│       │   └── ...
-│       ├── types/               # TypeScript types
-│       │   └── index.ts
-│       ├── App.js               # Main app + routing
-│       └── index.js             # Entry point
+│       ├── components/          # Layout, onboarding wizard, status widgets
+│       │   └── ui/              # shadcn/ui primitives
+│       ├── contexts/            # AuthContext (Supabase session)
+│       ├── lib/                 # api.js service layer, Supabase client, helpers
+│       ├── pages/               # Dashboard, Invoices, InvoiceDetail, Integrations,
+│       │                        # ReminderPolicy, Settings, WorkspaceSetup, Landing
+│       └── App.js               # Routes and protected-route wrapper
 ├── supabase/
-│   ├── config.toml              # Supabase configuration
-│   ├── migrations/              # Database migrations
-│   │   ├── 001_initial_schema.sql
-│   │   └── ...
-│   └── functions/               # Edge Functions
-│       ├── _shared/             # Shared utilities
-│       │   ├── cors.ts
-│       │   ├── gmail.ts
-│       │   ├── resend.ts
-│       │   ├── stripe.ts
-│       │   └── supabase.ts
-│       ├── check-replies/       # Detect Gmail replies
-│       ├── customers/           # Customer list
-│       ├── dashboard/           # KPI metrics
-│       ├── health/              # System health
-│       ├── integrations-gmail/  # Gmail OAuth
-│       ├── integrations-stripe/ # Stripe connection
-│       ├── invoices/            # Invoice management
-│       ├── notifications/       # User notifications
-│       ├── onboarding/          # Onboarding flow
-│       ├── policies/            # Reminder policies
-│       ├── scheduler/           # Send reminders
-│       ├── stripe-sync/         # Sync from Stripe
-│       ├── stripe-webhook/      # Handle Stripe events
-│       ├── weekly-digest/       # Weekly AR email
-│       └── workspaces/          # Workspace CRUD
-└── README.md
+│   ├── config.toml              # Local Supabase configuration
+│   ├── migrations/              # SQL schema, RLS policies, triggers
+│   └── functions/
+│       ├── _shared/             # CORS, Supabase, Stripe, Gmail, Resend helpers
+│       ├── scheduler/           # Sends due reminders
+│       ├── check-replies/       # Detects customer replies in Gmail
+│       ├── stripe-sync/         # Pulls customers and invoices from Stripe
+│       ├── stripe-webhook/      # Handles Stripe invoice events
+│       ├── weekly-digest/       # A/R summary email
+│       └── ...                  # invoices, policies, dashboard, integrations, etc.
+└── .cursor/skills/              # Cursor agent instructions used during development
 ```
 
-## Deployment
+## Status
 
-### Production Hosting ($25/month)
+Working MVP, in active development; not deployed publicly. Core flows (sign-in, Stripe and Gmail connection, invoice sync, reminder sending, reply detection) are implemented. Known gaps before production:
 
-| Service | Purpose | Cost |
-|---------|---------|------|
-| Supabase Pro | Database, Auth, Edge Functions | $25/mo |
-| Cloudflare Pages | Frontend hosting | Free |
-
-### Deploy to Production
-
-1. **Create Supabase project** at [supabase.com](https://supabase.com)
-
-2. **Run migrations**
-   ```bash
-   supabase link --project-ref your-project-ref
-   supabase db push
-   ```
-
-3. **Deploy Edge Functions**
-   ```bash
-   supabase functions deploy
-   ```
-
-4. **Set up Cloudflare Pages**
-   - Connect your GitHub repository
-   - Build command: `cd frontend && npm run build`
-   - Output directory: `frontend/build`
-
-5. **Configure secrets** in Supabase Dashboard > Settings > Secrets
-
-## Documentation
-
-- [Architecture Guide](docs/ARCHITECTURE.md) - Technical details, database schema, API reference
-- [Supabase Docs](https://supabase.com/docs) - Edge Functions, Auth, Database
-
-## Development Status
-
-### Completed
-- [x] Project structure and Supabase setup
-- [x] Database schema with RLS (14 tables)
-- [x] All core Edge Functions (15 functions)
-- [x] Gmail OAuth integration + email sending
-- [x] Stripe integration + webhook handling
-- [x] Reminder scheduler (pg_cron)
-- [x] Reply detection
-- [x] Frontend with Supabase client
-- [x] API service layer
-- [x] Weekly digest Edge Function
-- [x] TypeScript types for frontend
-
-### MVP Sprint (In Progress)
-- [ ] Stripe sync with UI-configurable schedule
-- [ ] TypeScript migration for frontend (.jsx → .tsx)
-- [ ] CORS restriction for production
-- [ ] pg_cron jobs setup in production
-
-### Post-MVP
-- [ ] Real-time notifications (Supabase Realtime)
-- [ ] Test coverage
-- [ ] Error monitoring (Sentry)
-- [ ] Production deployment
+- Stripe keys and Gmail OAuth tokens are stored in plain table columns; moving them to Supabase Vault is planned.
+- The Stripe webhook falls back to processing unsigned payloads for local development; this must be removed before production.
+- CORS allows all origins.
+- Cron schedules for the background functions are not yet defined in migrations.
+- No automated tests yet; the frontend is still JavaScript (TypeScript migration planned).
 
 ## License
 
-MIT
+No license has been chosen yet; all rights reserved by the author.

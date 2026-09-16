@@ -137,7 +137,7 @@ export default function Integrations({ user }) {
     }
   };
 
-  const webhookUrl = `${process.env.REACT_APP_BACKEND_URL}/api/webhooks/stripe`;
+  const webhookUrl = `${process.env.REACT_APP_SUPABASE_URL}/functions/v1/stripe-webhook`;
 
   const copyWebhookUrl = () => {
     navigator.clipboard.writeText(webhookUrl);
